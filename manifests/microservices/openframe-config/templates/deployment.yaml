@@ -24,7 +24,7 @@ spec:
               name: management
           envFrom:
             - configMapRef:
-                name: openframe-config
+                name: openframe-config-env
           livenessProbe:
             httpGet:
               path: /xml/shared-logback-spring.xml
