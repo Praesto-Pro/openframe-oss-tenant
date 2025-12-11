@@ -75,7 +75,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
+        "h": 4,
         "w": 4,
         "x": 0,
         "y": 1
@@ -101,12 +101,12 @@
       "pluginVersion": "12.3.0",
       "targets": [
         {
-          "expr": "up{service=\"kafka-jmx-metrics\"}",
+          "expr": "up{service=\"nats\"}",
           "legendFormat": "{{pod}}",
           "refId": "A"
         }
       ],
-      "title": "Kafka Status",
+      "title": "NATS Status",
       "type": "stat"
     },
     {
@@ -134,7 +134,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
+        "h": 4,
         "w": 4,
         "x": 4,
         "y": 1
@@ -160,14 +160,9 @@
       "pluginVersion": "12.3.0",
       "targets": [
         {
-          "expr": "java_lang_runtime_uptime{service=\"kafka-jmx-metrics\", pod=~\".*broker.*\"} / 1000",
-          "legendFormat": "Broker {{pod}}",
+          "expr": "time() - process_start_time_seconds{service=\"nats\"}",
+          "legendFormat": "{{pod}}",
           "refId": "A"
-        },
-        {
-          "expr": "java_lang_runtime_uptime{service=\"kafka-jmx-metrics\", pod=~\".*controller.*\"} / 1000",
-          "legendFormat": "Controller {{pod}}",
-          "refId": "B"
         }
       ],
       "title": "Uptime",
@@ -197,12 +192,12 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
+        "h": 4,
         "w": 4,
         "x": 8,
         "y": 1
       },
-      "id": 5,
+      "id": 4,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -223,12 +218,12 @@
       "pluginVersion": "12.3.0",
       "targets": [
         {
-          "expr": "count(count by (topic) (kafka_log_log_size{service=\"kafka-jmx-metrics\", topic!~\"__.*|connect-.*\"}))",
-          "legendFormat": "topics",
+          "expr": "nats_varz_connections{service=\"nats\"}",
+          "legendFormat": "{{pod}}",
           "refId": "A"
         }
       ],
-      "title": "Topics",
+      "title": "Connections",
       "type": "stat"
     },
     {
@@ -255,12 +250,12 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
+        "h": 4,
         "w": 4,
         "x": 12,
         "y": 1
       },
-      "id": 27,
+      "id": 5,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
@@ -281,12 +276,78 @@
       "pluginVersion": "12.3.0",
       "targets": [
         {
-          "expr": "count(count by (partition) (kafka_log_log_size{service=\"kafka-jmx-metrics\", topic!~\"__.*|connect-.*\"}))",
-          "legendFormat": "partitions",
+          "expr": "nats_connz_subscriptions{service=\"nats\"}",
+          "legendFormat": "{{pod}}",
           "refId": "A"
         }
       ],
-      "title": "Partitions",
+      "title": "Client Subscriptions",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "id": 6,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.3.0",
+      "targets": [
+        {
+          "expr": "nats_varz_slow_consumers{service=\"nats\"}",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Slow Consumers",
       "type": "stat"
     },
     {
@@ -307,16 +368,16 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "red",
                 "value": null
               },
               {
                 "color": "yellow",
-                "value": 70
+                "value": 80
               },
               {
-                "color": "red",
-                "value": 90
+                "color": "green",
+                "value": 95
               }
             ]
           },
@@ -325,85 +386,12 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
-        "w": 4,
-        "x": 16,
-        "y": 1
-      },
-      "id": 14,
-      "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
-      },
-      "pluginVersion": "12.3.0",
-      "targets": [
-        {
-          "expr": "100 * java_lang_memory_heapmemoryusage_used{service=\"kafka-jmx-metrics\", pod=~\".*broker.*\"} / java_lang_memory_heapmemoryusage_max{service=\"kafka-jmx-metrics\", pod=~\".*broker.*\"}",
-          "legendFormat": "Broker {{pod}}",
-          "refId": "A"
-        },
-        {
-          "expr": "100 * java_lang_memory_heapmemoryusage_used{service=\"kafka-jmx-metrics\", pod=~\".*controller.*\"} / java_lang_memory_heapmemoryusage_max{service=\"kafka-jmx-metrics\", pod=~\".*controller.*\"}",
-          "legendFormat": "Controller {{pod}}",
-          "refId": "B"
-        }
-      ],
-      "title": "Heap %",
-      "type": "gauge"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 0,
-          "mappings": [],
-          "max": 100,
-          "min": 0,
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 30
-              },
-              {
-                "color": "green",
-                "value": 50
-              }
-            ]
-          },
-          "unit": "percent"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 9,
+        "h": 4,
         "w": 4,
         "x": 20,
         "y": 1
       },
-      "id": 15,
+      "id": 31,
       "options": {
         "minVizHeight": 75,
         "minVizWidth": 75,
@@ -422,17 +410,12 @@
       "pluginVersion": "12.3.0",
       "targets": [
         {
-          "expr": "avg(kafka_network_processor_idlepercent_value{service=\"kafka-jmx-metrics\", pod=~\".*broker.*\"}) by (pod) * 100",
-          "legendFormat": "Broker {{pod}}",
+          "expr": "nats_subsz_cache_hit_rate{service=\"nats\"} * 100",
+          "legendFormat": "{{pod}}",
           "refId": "A"
-        },
-        {
-          "expr": "avg(kafka_network_processor_idlepercent_value{service=\"kafka-jmx-metrics\", pod=~\".*controller.*\"}) by (pod) * 100",
-          "legendFormat": "Controller {{pod}}",
-          "refId": "B"
         }
       ],
-      "title": "Network Idle %",
+      "title": "Cache Hit Rate",
       "type": "gauge"
     },
     {
@@ -441,9 +424,9 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 10
+        "y": 5
       },
-      "id": 6,
+      "id": 8,
       "panels": [],
       "title": "System",
       "type": "row"
@@ -505,7 +488,7 @@
               }
             ]
           },
-          "unit": "percentunit"
+          "unit": "percent"
         },
         "overrides": []
       },
@@ -513,9 +496,9 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 11
+        "y": 6
       },
-      "id": 7,
+      "id": 9,
       "options": {
         "legend": {
           "calcs": [
@@ -535,14 +518,9 @@
       "pluginVersion": "12.3.0",
       "targets": [
         {
-          "expr": "java_lang_operatingsystem_processcpuload{service=\"kafka-jmx-metrics\", pod=~\".*broker.*\"}",
-          "legendFormat": "Broker {{pod}}",
+          "expr": "nats_varz_cpu{service=\"nats\"}",
+          "legendFormat": "{{pod}}",
           "refId": "A"
-        },
-        {
-          "expr": "java_lang_operatingsystem_processcpuload{service=\"kafka-jmx-metrics\", pod=~\".*controller.*\"}",
-          "legendFormat": "Controller {{pod}}",
-          "refId": "B"
         }
       ],
       "title": "CPU Usage",
@@ -613,9 +591,9 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 11
+        "y": 6
       },
-      "id": 16,
+      "id": 10,
       "options": {
         "legend": {
           "calcs": [
@@ -635,17 +613,12 @@
       "pluginVersion": "12.3.0",
       "targets": [
         {
-          "expr": "java_lang_memory_heapmemoryusage_used{service=\"kafka-jmx-metrics\", pod=~\".*broker.*\"}",
-          "legendFormat": "Broker {{pod}}",
+          "expr": "nats_varz_mem{service=\"nats\"}",
+          "legendFormat": "{{pod}}",
           "refId": "A"
-        },
-        {
-          "expr": "java_lang_memory_heapmemoryusage_used{service=\"kafka-jmx-metrics\", pod=~\".*controller.*\"}",
-          "legendFormat": "Controller {{pod}}",
-          "refId": "B"
         }
       ],
-      "title": "Heap Memory",
+      "title": "Memory Usage",
       "type": "timeseries"
     },
     {
@@ -713,9 +686,9 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 11
+        "y": 6
       },
-      "id": 24,
+      "id": 11,
       "options": {
         "legend": {
           "calcs": [
@@ -735,17 +708,12 @@
       "pluginVersion": "12.3.0",
       "targets": [
         {
-          "expr": "java_lang_threading_threadcount{service=\"kafka-jmx-metrics\", pod=~\".*broker.*\"}",
-          "legendFormat": "Broker {{pod}}",
+          "expr": "go_goroutines{service=\"nats\"}",
+          "legendFormat": "{{pod}}",
           "refId": "A"
-        },
-        {
-          "expr": "java_lang_threading_threadcount{service=\"kafka-jmx-metrics\", pod=~\".*controller.*\"}",
-          "legendFormat": "Controller {{pod}}",
-          "refId": "B"
         }
       ],
-      "title": "Thread Count",
+      "title": "Goroutines",
       "type": "timeseries"
     },
     {
@@ -754,11 +722,11 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 19
+        "y": 14
       },
-      "id": 9,
+      "id": 12,
       "panels": [],
-      "title": "Request Throughput",
+      "title": "Messaging",
       "type": "row"
     },
     {
@@ -818,7 +786,7 @@
               }
             ]
           },
-          "unit": "reqps"
+          "unit": "short"
         },
         "overrides": []
       },
@@ -826,9 +794,9 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 20
+        "y": 15
       },
-      "id": 29,
+      "id": 13,
       "options": {
         "legend": {
           "calcs": [
@@ -848,17 +816,17 @@
       "pluginVersion": "12.3.0",
       "targets": [
         {
-          "expr": "sum(rate(kafka_network_requestmetrics_requestspersec_count{service=\"kafka-jmx-metrics\", request=\"Produce\"}[5m])) by (pod)",
-          "legendFormat": "Produce",
+          "expr": "rate(nats_varz_in_msgs{service=\"nats\"}[5m])",
+          "legendFormat": "In",
           "refId": "A"
         },
         {
-          "expr": "sum(rate(kafka_network_requestmetrics_requestspersec_count{service=\"kafka-jmx-metrics\", request=~\"Fetch.*\"}[5m])) by (pod)",
-          "legendFormat": "Fetch",
+          "expr": "rate(nats_varz_out_msgs{service=\"nats\"}[5m])",
+          "legendFormat": "Out",
           "refId": "B"
         }
       ],
-      "title": "Produce vs Fetch Requests/s",
+      "title": "Messages/s",
       "type": "timeseries"
     },
     {
@@ -903,6 +871,360 @@
             "thresholdsStyle": {
               "mode": "off"
             }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 15
+      },
+      "id": 14,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.3.0",
+      "targets": [
+        {
+          "expr": "rate(nats_varz_in_bytes{service=\"nats\"}[5m])",
+          "legendFormat": "In",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(nats_varz_out_bytes{service=\"nats\"}[5m])",
+          "legendFormat": "Out",
+          "refId": "B"
+        }
+      ],
+      "title": "Throughput",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 25,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 15
+      },
+      "id": 15,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.3.0",
+      "targets": [
+        {
+          "expr": "nats_varz_connections{service=\"nats\"}",
+          "legendFormat": "Current",
+          "refId": "A"
+        },
+        {
+          "expr": "nats_varz_total_connections{service=\"nats\"}",
+          "legendFormat": "Total",
+          "refId": "B"
+        }
+      ],
+      "title": "Connections",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "id": 16,
+      "panels": [],
+      "title": "JetStream",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 24
+      },
+      "id": 17,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.3.0",
+      "targets": [
+        {
+          "expr": "nats_server_total_streams{service=\"nats\"}",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Streams",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 24
+      },
+      "id": 18,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.3.0",
+      "targets": [
+        {
+          "expr": "nats_server_total_consumers{service=\"nats\"}",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Consumers",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 24
+      },
+      "id": 19,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.3.0",
+      "targets": [
+        {
+          "expr": "nats_server_total_messages{service=\"nats\"}",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Messages Stored",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
           },
           "mappings": [],
           "thresholds": {
@@ -921,44 +1243,44 @@
                 "value": 10
               }
             ]
-          },
-          "unit": "short"
+          }
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 20
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 24
       },
-      "id": 19,
+      "id": 22,
       "options": {
-        "legend": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
           "calcs": [
-            "mean",
-            "max"
+            "lastNotNull"
           ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
+          "fields": "",
+          "values": false
         },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "desc"
-        }
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
       },
       "pluginVersion": "12.3.0",
       "targets": [
         {
-          "expr": "sum(rate(kafka_network_requestmetrics_errorspersec_count{service=\"kafka-jmx-metrics\"}[5m])) by (pod, error)",
-          "legendFormat": "{{error}}",
+          "expr": "nats_varz_jetstream_stats_api_errors{service=\"nats\"}",
+          "legendFormat": "{{pod}}",
           "refId": "A"
         }
       ],
-      "title": "Request Errors/s",
-      "type": "timeseries"
+      "title": "API Errors",
+      "type": "stat"
     },
     {
       "datasource": {
@@ -968,42 +1290,12 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "thresholds"
           },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 25,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
+          "decimals": 0,
           "mappings": [],
+          "max": 100,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1012,66 +1304,110 @@
                 "value": null
               },
               {
+                "color": "yellow",
+                "value": 70
+              },
+              {
                 "color": "red",
-                "value": 80
+                "value": 90
               }
             ]
           },
-          "unit": "short"
+          "unit": "percent"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 8,
+        "h": 4,
+        "w": 4,
         "x": 16,
-        "y": 20
+        "y": 24
       },
-      "id": 12,
+      "id": 21,
       "options": {
-        "legend": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {
           "calcs": [
-            "mean",
-            "max"
+            "lastNotNull"
           ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
+          "fields": "",
+          "values": false
         },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "desc"
-        }
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
       },
       "pluginVersion": "12.3.0",
       "targets": [
         {
-          "expr": "kafka_network_requestchannel_requestqueuesize_value{service=\"kafka-jmx-metrics\"}",
-          "legendFormat": "Request",
+          "expr": "100 * nats_varz_jetstream_stats_storage{service=\"nats\"} / nats_varz_jetstream_config_max_storage{service=\"nats\"}",
+          "legendFormat": "{{pod}}",
           "refId": "A"
-        },
-        {
-          "expr": "kafka_network_requestchannel_responsequeuesize_value{service=\"kafka-jmx-metrics\"}",
-          "legendFormat": "Response",
-          "refId": "B"
         }
       ],
-      "title": "Queue Sizes",
-      "type": "timeseries"
+      "title": "Storage Used %",
+      "type": "gauge"
     },
     {
-      "collapsed": false,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
       "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 28
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 24
       },
       "id": 20,
-      "panels": [],
-      "title": "Topics & Logs",
-      "type": "row"
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.3.0",
+      "targets": [
+        {
+          "expr": "nats_varz_jetstream_stats_storage{service=\"nats\"}",
+          "legendFormat": "{{pod}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Storage Used",
+      "type": "stat"
     },
     {
       "datasource": {
@@ -1138,215 +1474,13 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 29
-      },
-      "id": 21,
-      "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "pluginVersion": "12.3.0",
-      "targets": [
-        {
-          "expr": "sum(kafka_log_log_size{service=\"kafka-jmx-metrics\", topic!~\"__.*|connect-.*\"}) by (topic)",
-          "legendFormat": "{{topic}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Log Size by Topic",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 25,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 29
-      },
-      "id": 22,
-      "options": {
-        "legend": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "displayMode": "table",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "pluginVersion": "12.3.0",
-      "targets": [
-        {
-          "expr": "sum(rate(kafka_log_log_logendoffset{service=\"kafka-jmx-metrics\", topic!~\"__.*|connect-.*\"}[5m])) by (topic)",
-          "legendFormat": "{{topic}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Messages In/s by Topic",
-      "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 37
+        "y": 28
       },
       "id": 23,
-      "panels": [],
-      "title": "Operations",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 25,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "smooth",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 38
-      },
-      "id": 8,
       "options": {
         "legend": {
           "calcs": [
-            "mean",
-            "max"
+            "lastNotNull"
           ],
           "displayMode": "table",
           "placement": "bottom",
@@ -1361,17 +1495,17 @@
       "pluginVersion": "12.3.0",
       "targets": [
         {
-          "expr": "java_lang_operatingsystem_openfiledescriptorcount{service=\"kafka-jmx-metrics\"}",
-          "legendFormat": "Open",
+          "expr": "nats_varz_jetstream_stats_storage{service=\"nats\"}",
+          "legendFormat": "Used",
           "refId": "A"
         },
         {
-          "expr": "java_lang_operatingsystem_maxfiledescriptorcount{service=\"kafka-jmx-metrics\"}",
+          "expr": "nats_varz_jetstream_config_max_storage{service=\"nats\"}",
           "legendFormat": "Max",
           "refId": "B"
         }
       ],
-      "title": "File Descriptors",
+      "title": "JetStream Storage",
       "type": "timeseries"
     },
     {
@@ -1431,7 +1565,7 @@
               }
             ]
           },
-          "unit": "decbytes"
+          "unit": "short"
         },
         "overrides": []
       },
@@ -1439,9 +1573,9 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 38
+        "y": 28
       },
-      "id": 35,
+      "id": 24,
       "options": {
         "legend": {
           "calcs": [
@@ -1461,12 +1595,17 @@
       "pluginVersion": "12.3.0",
       "targets": [
         {
-          "expr": "sum(kafka_log_log_size{service=\"kafka-jmx-metrics\"}) by (pod)",
-          "legendFormat": "{{pod}}",
+          "expr": "rate(nats_varz_jetstream_stats_api_total{service=\"nats\"}[5m])",
+          "legendFormat": "Total",
           "refId": "A"
+        },
+        {
+          "expr": "rate(nats_varz_jetstream_stats_api_errors{service=\"nats\"}[5m])",
+          "legendFormat": "Errors",
+          "refId": "B"
         }
       ],
-      "title": "Total Log Size",
+      "title": "JetStream API Rate",
       "type": "timeseries"
     }
   ],
@@ -1474,7 +1613,7 @@
   "refresh": "30s",
   "schemaVersion": 42,
   "tags": [
-    "kafka",
+    "nats",
     "messaging",
     "streaming"
   ],
@@ -1487,7 +1626,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Kafka",
-  "uid": "kafka",
+  "title": "NATS",
+  "uid": "nats",
   "version": 1
 }
