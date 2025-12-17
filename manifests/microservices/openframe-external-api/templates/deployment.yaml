@@ -12,6 +12,10 @@ spec:
     metadata:
       labels:
         app: openframe-external-api
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
     spec:
       initContainers:
         - name: wait-for-config-server
@@ -27,8 +31,6 @@ spec:
             - containerPort: 8093
               name: management
           env:
-            - name: SPRING_PROFILES_ACTIVE
-              value: "{{ .Values.deployment.oss.repository.profile }}"
             - name: SPRING_CONFIG_URL
               value: "http://openframe-config.microservices.svc.cluster.local:8888"
           livenessProbe:

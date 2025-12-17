@@ -1,0 +1,66 @@
+registerJob:
+  enabled: true
+  image:
+    registry: ghcr.io/flamingo-stack/registry
+    tag: "8.9.1"
+
+
+alloy:
+  alloy:
+    clustering:
+      enabled: false
+    stabilityLevel: "generally-available"
+
+    configMap:
+      create: false
+      name: alloy-config
+      key: config.alloy
+    
+    mounts:
+      varlog: true
+
+  
+  image:
+    registry: ghcr.io/flamingo-stack/registry
+    repository: grafana/alloy
+    tag: "v1.12.1"
+  configReloader:
+    image:
+      registry: ghcr.io/flamingo-stack/registry
+      repository: prometheus-operator/prometheus-config-reloader
+      tag: "v0.86.1"
+
+  controller:
+    type: daemonset
+    revisionHistoryLimit: 2
+    tolerations:
+      - operator: Exists
+        effect: NoSchedule
+    podAnnotations:
+      loki.grafana.com/scrape: "true"
+
+  serviceAccount:
+    create: true
+  rbac:
+    create: true
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 200m
+      memory: 512Mi
+
+  livenessProbe:
+    httpGet:
+      path: /-/healthy
+      port: 12345
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /-/ready
+      port: 12345
+    initialDelaySeconds: 10
+    periodSeconds: 5

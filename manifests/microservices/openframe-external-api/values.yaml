@@ -1,10 +1,3 @@
-
-deployment:
-  oss:
-    enabled: true    
-    repository:
-      profile: dev
-
 registerJob:
   enabled: true
   image:
@@ -20,6 +13,8 @@ image:
   repo: ghcr.io/flamingo-stack/openframe-oss-tenant/openframe-external-api
   tag: latest
 
+podAnnotations:
+  loki.grafana.com/scrape: "true"
 service:
   annotations:
     prometheus.io/scrape: "true"

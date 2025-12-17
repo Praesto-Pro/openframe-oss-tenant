@@ -15,7 +15,6 @@ deployment:
       appsDir: apps
       URL: https://github.com/flamingo-stack/openframe-oss-tenant.git
       branch: main
-      profile: dev
       autoSync: true
   saas:
     enabled: false
@@ -43,6 +42,8 @@ image:
   repo: ghcr.io/flamingo-stack/openframe-oss-tenant/openframe-gateway
   tag: latest
 
+podAnnotations:
+  loki.grafana.com/scrape: "true"
 service:
   annotations:
     prometheus.io/scrape: "true"
