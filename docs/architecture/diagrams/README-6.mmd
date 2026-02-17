@@ -1,6 +1,5 @@
 flowchart TD
-    MongoSave["Repository.save()"] --> Aspect["MachineTagEventAspect"]
-    Aspect --> KafkaProducer["Kafka Producer"]
-    KafkaProducer --> KafkaTopic["Kafka Topic"]
-    KafkaTopic --> Pinot["Pinot"]
-    KafkaTopic --> Cassandra["Cassandra"]
+    ExternalClient --> Gateway
+    Gateway --> ExternalApi
+    ExternalApi --> DomainServices
+    DomainServices --> Mongo

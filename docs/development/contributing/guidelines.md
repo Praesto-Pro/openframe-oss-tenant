@@ -1,625 +1,434 @@
 # Contributing Guidelines
 
-Welcome to the OpenFrame project! This guide covers everything you need to know about contributing to the platform, from coding standards to the pull request process.
+Welcome to the OpenFrame contributing guidelines! This document outlines the development workflow, code standards, pull request process, and quality requirements for contributing to OpenFrame.
 
-## Getting Started
+## Code of Conduct
 
-### Prerequisites for Contributors
+OpenFrame is an open and welcoming project. All contributors are expected to:
 
-Before contributing, ensure you have:
+- **Be Respectful**: Treat all community members with respect and courtesy
+- **Be Collaborative**: Work together constructively and share knowledge
+- **Be Professional**: Maintain professional communication in all interactions
+- **Be Inclusive**: Welcome newcomers and help them get started
 
-1. ✅ **Development Environment** - [Environment Setup](../setup/environment.md) completed
-2. ✅ **Local Development** - [Local Development](../setup/local-development.md) working
-3. ✅ **OpenMSP Slack Access** - [Join our community](https://join.slack.com/t/openmsp/shared_invite/zt-36bl7mx0h-3~U2nFH6nqHqoTPXMaHEHA)
-4. ✅ **GitHub Account** - With SSH key configured
-5. ✅ **Basic Knowledge** - Spring Boot, React/Next.js, TypeScript
+## Development Workflow
 
-### First-Time Contributor Setup
+### 1. Fork and Clone
 
 ```bash
 # Fork the repository on GitHub
 # Then clone your fork
-git clone git@github.com:YOUR_USERNAME/openframe-oss-tenant.git
+git clone https://github.com/YOUR_USERNAME/openframe-oss-tenant.git
 cd openframe-oss-tenant
 
 # Add upstream remote
-git remote add upstream git@github.com:openframe-stack/openframe-oss-tenant.git
+git remote add upstream https://github.com/flamingo-stack/openframe-oss-tenant.git
 
 # Verify remotes
 git remote -v
-# origin    git@github.com:YOUR_USERNAME/openframe-oss-tenant.git (fetch)
-# origin    git@github.com:YOUR_USERNAME/openframe-oss-tenant.git (push)
-# upstream  git@github.com:openframe-stack/openframe-oss-tenant.git (fetch)
-# upstream  git@github.com:openframe-stack/openframe-oss-tenant.git (push)
 ```
 
-## Code Standards
+### 2. Set Up Development Environment
 
-### Java/Spring Boot Standards
+Follow the [Environment Setup](../setup/environment.md) guide to configure your development environment.
 
-**Code Style:**
-- **Google Java Style Guide** with minor modifications
-- **4-space indentation**
-- **120-character line limit**
-- **Comprehensive Javadoc** for public APIs
+### 3. Create Feature Branch
 
-**Example:**
+```bash
+# Sync with upstream
+git checkout main
+git pull upstream main
+
+# Create feature branch
+git checkout -b feature/your-feature-name
+
+# Or for bug fixes
+git checkout -b fix/issue-description
+
+# Or for documentation
+git checkout -b docs/documentation-improvement
+```
+
+## Branch Naming Conventions
+
+Use descriptive branch names that follow these patterns:
+
+| Type | Pattern | Example |
+|------|---------|---------|
+| **Feature** | `feature/description` | `feature/user-profile-management` |
+| **Bug Fix** | `fix/issue-description` | `fix/authentication-token-expiry` |
+| **Documentation** | `docs/section-name` | `docs/api-documentation-update` |
+| **Refactoring** | `refactor/component-name` | `refactor/user-service-cleanup` |
+| **Performance** | `perf/optimization-area` | `perf/database-query-optimization` |
+| **CI/CD** | `ci/workflow-name` | `ci/automated-testing-pipeline` |
+
+## Code Style and Conventions
+
+### Java/Spring Boot Backend
+
+#### Code Formatting
+
+**Use Google Java Style:**
+```bash
+# Configure IntelliJ IDEA
+# File → Settings → Code Style → Java → Import Scheme
+# Select: GoogleStyle.xml
+```
+
+**Key formatting rules:**
+- 2 spaces for indentation
+- Line length: 100 characters
+- No trailing whitespace
+- Unix line endings (LF)
+
+#### Naming Conventions
+
 ```java
-/**
- * Service for managing device lifecycle operations.
- * 
- * <p>This service handles device registration, monitoring, and decommissioning
- * within the multi-tenant OpenFrame platform. All operations are tenant-aware
- * and enforce proper security boundaries.
- * 
- * @author OpenFrame Team
- * @since 1.0.0
- */
+// Classes: PascalCase
+public class UserService {
+
+    // Constants: UPPER_SNAKE_CASE
+    private static final String DEFAULT_ROLE = "USER";
+    
+    // Fields and methods: camelCase
+    private UserRepository userRepository;
+    
+    public UserResponse createUser(CreateUserRequest request) {
+        // Local variables: camelCase
+        String hashedPassword = passwordEncoder.encode(request.getPassword());
+        
+        return UserResponse.builder()
+            .id(savedUser.getId())
+            .email(savedUser.getEmail())
+            .build();
+    }
+}
+```
+
+#### Method Structure
+
+```java
 @Service
-@Slf4j
-@Transactional(readOnly = true)
-public class DeviceService {
+@Transactional
+public class UserService {
     
-    private final DeviceRepository deviceRepository;
-    private final OrganizationService organizationService;
-    private final AuditService auditService;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final TenantContext tenantContext;
     
-    public DeviceService(DeviceRepository deviceRepository,
-                        OrganizationService organizationService,
-                        AuditService auditService) {
-        this.deviceRepository = deviceRepository;
-        this.organizationService = organizationService;
-        this.auditService = auditService;
+    // Constructor injection (preferred)
+    public UserService(UserRepository userRepository,
+                      PasswordEncoder passwordEncoder,
+                      TenantContext tenantContext) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.tenantContext = tenantContext;
     }
     
     /**
-     * Creates a new device within the specified organization.
+     * Creates a new user with the specified details.
      * 
-     * @param request the device creation request containing device details
-     * @return the created device with generated ID and metadata
-     * @throws OrganizationNotFoundException if the organization doesn't exist
-     * @throws DuplicateDeviceException if a device with the same name exists
+     * @param request the user creation request containing user details
+     * @return the created user response with generated ID
+     * @throws UserAlreadyExistsException if user with email already exists
+     * @throws ValidationException if request validation fails
      */
-    @Transactional
-    public Device createDevice(CreateDeviceRequest request) {
-        log.debug("Creating device: {} for organization: {}", 
-                 request.getDeviceName(), request.getOrganizationId());
+    public UserResponse createUser(CreateUserRequest request) {
+        // Input validation
+        validateCreateUserRequest(request);
         
-        // Validate organization exists and user has access
-        Organization organization = organizationService.findById(request.getOrganizationId());
+        // Business logic
+        String tenantId = tenantContext.getCurrentTenant();
+        checkUserNotExists(request.getEmail(), tenantId);
         
-        // Check for duplicate device names within organization
-        if (deviceRepository.existsByTenantIdAndOrganizationIdAndDeviceName(
-                TenantContext.getCurrentTenant(),
-                request.getOrganizationId(),
-                request.getDeviceName())) {
-            throw new DuplicateDeviceException(
-                "Device with name '" + request.getDeviceName() + "' already exists");
+        User user = buildUserFromRequest(request, tenantId);
+        User savedUser = userRepository.save(user);
+        
+        // Return response
+        return userMapper.toResponse(savedUser);
+    }
+    
+    private void validateCreateUserRequest(CreateUserRequest request) {
+        // Validation logic
+    }
+    
+    private void checkUserNotExists(String email, String tenantId) {
+        if (userRepository.existsByEmailAndTenantId(email, tenantId)) {
+            throw new UserAlreadyExistsException(
+                "User with email '" + email + "' already exists");
         }
-        
-        Device device = Device.builder()
-            .id(UUID.randomUUID().toString())
-            .tenantId(TenantContext.getCurrentTenant())
-            .organizationId(request.getOrganizationId())
-            .deviceName(request.getDeviceName())
-            .deviceType(request.getDeviceType())
-            .status(DeviceStatus.PENDING)
-            .createdAt(Instant.now())
-            .createdBy(SecurityContextHolder.getContext().getAuthentication().getName())
-            .build();
-            
-        Device savedDevice = deviceRepository.save(device);
-        
-        auditService.logDeviceCreation(savedDevice);
-        
-        log.info("Successfully created device: {} with ID: {}", 
-                savedDevice.getDeviceName(), savedDevice.getId());
-        
-        return savedDevice;
     }
 }
 ```
 
-**Lombok Usage:**
-```java
-// Prefer builder pattern for complex objects
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class Device {
-    private String id;
-    private String tenantId;
-    private String organizationId;
-    private String deviceName;
-    private DeviceType deviceType;
-    private DeviceStatus status;
-    private Instant createdAt;
-    private String createdBy;
-}
+### TypeScript/Frontend
 
-// Use @Slf4j for logging
-@Service
-@Slf4j
-public class MyService {
-    // log.info(), log.debug(), log.error() available
+#### Code Formatting
+
+**Use Prettier configuration:**
+```json
+{
+  "semi": true,
+  "trailingComma": "es5",
+  "singleQuote": true,
+  "printWidth": 80,
+  "tabWidth": 2,
+  "useTabs": false
 }
 ```
 
-### TypeScript/React Standards
+#### Component Structure
 
-**Code Style:**
-- **Prettier** for code formatting
-- **ESLint** for code quality
-- **2-space indentation** for frontend code
-- **PascalCase** for React components
-- **camelCase** for functions and variables
-
-**Component Structure:**
 ```typescript
-// DeviceCard.tsx
-import React from 'react';
-import { Device, DeviceStatus } from '@/types/device';
-import { Badge } from '@/components/ui/badge';
+// UserProfile.tsx
+import { useState, useCallback } from 'react';
+import { z } from 'zod';
+import { useUserProfile } from '@/hooks/useUserProfile';
 import { Button } from '@/components/ui/button';
-import { useDeviceActions } from '@/hooks/useDeviceActions';
+import { Input } from '@/components/ui/input';
 
-interface DeviceCardProps {
-  device: Device;
-  onDeviceUpdate?: (deviceId: string, action: string) => void;
+// Type definitions
+interface UserProfileProps {
+  userId: string;
+  onUpdateSuccess?: () => void;
 }
 
-/**
- * DeviceCard displays device information in a card format.
- * 
- * Supports device actions like restart, update, and removal based on
- * user permissions and device status.
- */
-export const DeviceCard: React.FC<DeviceCardProps> = ({
-  device,
-  onDeviceUpdate,
+// Validation schema
+const updateProfileSchema = z.object({
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  email: z.string().email('Invalid email format'),
+});
+
+type UpdateProfileData = z.infer<typeof updateProfileSchema>;
+
+// Component
+export const UserProfile: React.FC<UserProfileProps> = ({
+  userId,
+  onUpdateSuccess,
 }) => {
-  const { executeAction, isLoading } = useDeviceActions();
+  const [isEditing, setIsEditing] = useState(false);
+  const { profile, updateProfile, isLoading } = useUserProfile(userId);
 
-  const handleAction = async (action: string) => {
+  const handleSave = useCallback(async (data: UpdateProfileData) => {
     try {
-      await executeAction(device.id, action);
-      onDeviceUpdate?.(device.id, action);
+      await updateProfile(data);
+      setIsEditing(false);
+      onUpdateSuccess?.();
     } catch (error) {
-      console.error('Failed to execute device action:', error);
+      console.error('Failed to update profile:', error);
     }
-  };
+  }, [updateProfile, onUpdateSuccess]);
 
-  const getStatusColor = (status: DeviceStatus): string => {
-    switch (status) {
-      case DeviceStatus.ONLINE:
-        return 'bg-green-100 text-green-800';
-      case DeviceStatus.OFFLINE:
-        return 'bg-red-100 text-red-800';
-      case DeviceStatus.PENDING:
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
-    <div className="p-6 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            {device.deviceName}
-          </h3>
-          
-          <div className="flex items-center gap-4 text-sm text-gray-600">
-            <span>Type: {device.deviceType}</span>
-            <span>IP: {device.ipAddress}</span>
-            <span>OS: {device.operatingSystem}</span>
-          </div>
-          
-          <div className="mt-3">
-            <Badge 
-              className={getStatusColor(device.status)}
-              data-testid="device-status"
-            >
-              {device.status}
-            </Badge>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleAction('restart')}
-            disabled={isLoading || device.status === DeviceStatus.OFFLINE}
-            data-testid="restart-device-button"
-          >
-            {isLoading ? 'Processing...' : 'Restart'}
-          </Button>
-        </div>
-      </div>
+    <div className="user-profile">
+      {isEditing ? (
+        <EditForm 
+          profile={profile} 
+          onSave={handleSave}
+          onCancel={() => setIsEditing(false)}
+        />
+      ) : (
+        <ViewMode 
+          profile={profile}
+          onEdit={() => setIsEditing(true)}
+        />
+      )}
     </div>
   );
 };
-
-export default DeviceCard;
 ```
 
-**Custom Hooks:**
+#### Hook Patterns
+
 ```typescript
-// useDeviceActions.ts
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { devicesApi } from '@/services/api';
-import { toast } from '@/hooks/useToast';
+// useUserProfile.ts
+import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api-client';
 
-interface DeviceActionParams {
-  deviceId: string;
-  action: string;
-}
-
-export const useDeviceActions = () => {
+export const useUserProfile = (userId: string) => {
   const queryClient = useQueryClient();
-  
-  const mutation = useMutation({
-    mutationFn: ({ deviceId, action }: DeviceActionParams) => 
-      devicesApi.executeAction(deviceId, action),
-    
-    onSuccess: (_, { deviceId, action }) => {
-      // Invalidate and refetch device queries
-      queryClient.invalidateQueries({ queryKey: ['devices'] });
-      queryClient.invalidateQueries({ queryKey: ['device', deviceId] });
-      
-      toast({
-        title: 'Action Executed',
-        description: `Device ${action} initiated successfully`,
-        variant: 'success',
-      });
-    },
-    
-    onError: (error, { action }) => {
-      console.error('Device action failed:', error);
-      
-      toast({
-        title: 'Action Failed',
-        description: `Failed to ${action} device. Please try again.`,
-        variant: 'destructive',
-      });
+
+  const {
+    data: profile,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ['user-profile', userId],
+    queryFn: () => apiClient.getUser(userId),
+    enabled: !!userId,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: UpdateProfileData) => 
+      apiClient.updateUser(userId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['user-profile', userId]);
     },
   });
-  
-  const executeAction = (deviceId: string, action: string) => {
-    return mutation.mutateAsync({ deviceId, action });
-  };
-  
+
+  const updateProfile = useCallback(
+    (data: UpdateProfileData) => updateMutation.mutateAsync(data),
+    [updateMutation]
+  );
+
   return {
-    executeAction,
-    isLoading: mutation.isPending,
-    error: mutation.error,
+    profile,
+    isLoading: isLoading || updateMutation.isPending,
+    error: error || updateMutation.error,
+    updateProfile,
   };
 };
 ```
 
-### Database and API Standards
+### Database and API Patterns
 
-**MongoDB Entity Design:**
+#### Repository Layer
+
 ```java
-@Document(collection = "devices")
-@Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class Device {
+@Repository
+public interface UserRepository extends MongoRepository<User, String>, CustomUserRepository {
     
-    @Id
-    private String id;
+    Optional<User> findByEmailAndTenantId(String email, String tenantId);
     
-    @Indexed
-    private String tenantId;  // Always include for multi-tenancy
+    List<User> findByTenantIdAndRolesContaining(String tenantId, String role);
     
-    @Indexed
-    private String organizationId;
+    boolean existsByEmailAndTenantId(String email, String tenantId);
     
-    @Indexed
-    private String deviceName;
+    @Query("{ 'tenantId': ?0, 'active': true, 'lastLoginAt': { $gte: ?1 } }")
+    List<User> findActiveUsersSince(String tenantId, LocalDateTime since);
+}
+
+public interface CustomUserRepository {
+    List<User> findUsersWithComplexCriteria(UserSearchCriteria criteria);
+}
+
+@Component
+public class CustomUserRepositoryImpl implements CustomUserRepository {
     
-    @Enumerated(EnumType.STRING)
-    private DeviceType deviceType;
+    private final MongoTemplate mongoTemplate;
     
-    @Enumerated(EnumType.STRING)
-    private DeviceStatus status;
-    
-    private String ipAddress;
-    private String macAddress;
-    private String operatingSystem;
-    
-    @CreatedDate
-    private Instant createdAt;
-    
-    @LastModifiedDate  
-    private Instant updatedAt;
-    
-    private String createdBy;
-    private String updatedBy;
-    
-    // Compound index for efficient tenant-aware queries
-    @CompoundIndex(def = "{'tenantId': 1, 'organizationId': 1, 'status': 1}")
-    public static class Indexes {}
+    @Override
+    public List<User> findUsersWithComplexCriteria(UserSearchCriteria criteria) {
+        Criteria mongoCriteria = new Criteria();
+        
+        if (criteria.getTenantId() != null) {
+            mongoCriteria.and("tenantId").is(criteria.getTenantId());
+        }
+        
+        if (criteria.getSearchTerm() != null) {
+            Criteria searchCriteria = new Criteria().orOperator(
+                Criteria.where("firstName").regex(criteria.getSearchTerm(), "i"),
+                Criteria.where("lastName").regex(criteria.getSearchTerm(), "i"),
+                Criteria.where("email").regex(criteria.getSearchTerm(), "i")
+            );
+            mongoCriteria.andOperator(searchCriteria);
+        }
+        
+        Query query = new Query(mongoCriteria);
+        
+        if (criteria.getPageable() != null) {
+            query.with(criteria.getPageable());
+        }
+        
+        return mongoTemplate.find(query, User.class);
+    }
 }
 ```
 
-**REST API Design:**
+#### API Controller Standards
+
 ```java
 @RestController
-@RequestMapping("/api/devices")
+@RequestMapping("/api/users")
+@PreAuthorize("hasRole('USER')")
 @Validated
-@SecurityRequirement(name = "bearerAuth")
-public class DeviceController {
+public class UserController {
+    
+    private final UserService userService;
     
     @GetMapping
-    @Operation(summary = "List devices", description = "Retrieve paginated list of devices")
-    @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Devices retrieved successfully"),
-        @ApiResponse(responseCode = "401", description = "Unauthorized"),
-        @ApiResponse(responseCode = "403", description = "Forbidden")
-    })
-    public ResponseEntity<PageResponse<DeviceResponse>> getDevices(
-            @Parameter(description = "Organization ID to filter devices")
-            @RequestParam(required = false) String organizationId,
-            
-            @Parameter(description = "Device status filter")
-            @RequestParam(required = false) DeviceStatus status,
-            
-            @Parameter(description = "Pagination cursor")
-            @RequestParam(required = false) String cursor,
-            
-            @Parameter(description = "Number of items per page (max 100)")
-            @RequestParam(defaultValue = "20") @Max(100) int limit) {
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+    public ResponseEntity<PageResponse<UserResponse>> getUsers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String role) {
         
-        DeviceFilters filters = DeviceFilters.builder()
-            .organizationId(organizationId)
-            .status(status)
+        UserSearchCriteria criteria = UserSearchCriteria.builder()
+            .searchTerm(search)
+            .role(role)
+            .pageable(PageRequest.of(page, size))
             .build();
             
-        PaginationCriteria pagination = PaginationCriteria.builder()
-            .cursor(cursor)
-            .limit(limit)
-            .build();
-        
-        DeviceConnection connection = deviceService.getDevices(filters, pagination);
-        
-        PageResponse<DeviceResponse> response = PageResponse.<DeviceResponse>builder()
-            .data(connection.getDevices().stream()
-                 .map(deviceMapper::toResponse)
-                 .collect(Collectors.toList()))
-            .totalCount(connection.getTotalCount())
-            .hasNextPage(connection.getHasNextPage())
-            .nextCursor(connection.getNextCursor())
-            .build();
-            
-        return ResponseEntity.ok(response);
+        PageResponse<UserResponse> users = userService.findUsers(criteria);
+        return ResponseEntity.ok(users);
     }
     
     @PostMapping
-    @Operation(summary = "Create device", description = "Register a new device")
-    public ResponseEntity<DeviceResponse> createDevice(
-            @Valid @RequestBody CreateDeviceRequest request) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserResponse> createUser(
+            @Valid @RequestBody CreateUserRequest request) {
         
-        Device device = deviceService.createDevice(request);
-        DeviceResponse response = deviceMapper.toResponse(device);
+        UserResponse user = userService.createUser(request);
         
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        URI location = ServletUriComponentsBuilder
+            .fromCurrentRequest()
+            .path("/{id}")
+            .buildAndExpand(user.getId())
+            .toUri();
+            
+        return ResponseEntity.created(location).body(user);
+    }
+    
+    @GetMapping("/{userId}")
+    @PreAuthorize("@userSecurityService.canView(authentication, #userId)")
+    public ResponseEntity<UserResponse> getUser(@PathVariable String userId) {
+        UserResponse user = userService.getUser(userId);
+        return ResponseEntity.ok(user);
+    }
+    
+    @PutMapping("/{userId}")
+    @PreAuthorize("@userSecurityService.canModify(authentication, #userId)")
+    public ResponseEntity<UserResponse> updateUser(
+            @PathVariable String userId,
+            @Valid @RequestBody UpdateUserRequest request) {
+        
+        UserResponse user = userService.updateUser(userId, request);
+        return ResponseEntity.ok(user);
+    }
+    
+    @DeleteMapping("/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteUser(@PathVariable String userId) {
+        userService.deleteUser(userId);
+        return ResponseEntity.noContent().build();
+    }
+    
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleUserNotFound(UserNotFoundException e) {
+        ErrorResponse error = ErrorResponse.builder()
+            .code("USER_NOT_FOUND")
+            .message(e.getMessage())
+            .timestamp(LocalDateTime.now())
+            .build();
+            
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 }
 ```
 
-## Testing Standards
+## Commit Message Format
 
-### Backend Testing Requirements
+Use conventional commit format for clear change tracking:
 
-**Test Coverage Requirements:**
-- **Service Layer**: 90% line coverage minimum
-- **Repository Layer**: 85% line coverage minimum
-- **Controller Layer**: 80% line coverage minimum
-- **Critical Business Logic**: 100% coverage
-
-**Test Structure:**
-```java
-@ExtendWith(MockitoExtension.class)
-@DisplayName("DeviceService Tests")
-class DeviceServiceTest {
-    
-    @Mock private DeviceRepository deviceRepository;
-    @Mock private OrganizationService organizationService;
-    @Mock private AuditService auditService;
-    
-    @InjectMocks private DeviceService deviceService;
-    
-    @Nested
-    @DisplayName("Device Creation")
-    class DeviceCreation {
-        
-        @Test
-        @DisplayName("Should create device successfully with valid request")
-        void shouldCreateDeviceSuccessfullyWithValidRequest() {
-            // Given
-            CreateDeviceRequest request = createValidDeviceRequest();
-            Organization organization = createTestOrganization();
-            when(organizationService.findById(any())).thenReturn(organization);
-            when(deviceRepository.existsByTenantIdAndOrganizationIdAndDeviceName(any(), any(), any()))
-                .thenReturn(false);
-            when(deviceRepository.save(any(Device.class))).thenAnswer(invocation -> {
-                Device device = invocation.getArgument(0);
-                device.setId("generated-id");
-                return device;
-            });
-            
-            // When
-            Device result = deviceService.createDevice(request);
-            
-            // Then
-            assertThat(result).isNotNull();
-            assertThat(result.getId()).isEqualTo("generated-id");
-            assertThat(result.getDeviceName()).isEqualTo(request.getDeviceName());
-            
-            verify(deviceRepository).save(argThat(device ->
-                device.getTenantId().equals(TenantContext.getCurrentTenant()) &&
-                device.getStatus() == DeviceStatus.PENDING
-            ));
-            verify(auditService).logDeviceCreation(result);
-        }
-        
-        @Test
-        @DisplayName("Should throw exception when organization not found")
-        void shouldThrowExceptionWhenOrganizationNotFound() {
-            // Given
-            CreateDeviceRequest request = createValidDeviceRequest();
-            when(organizationService.findById(any()))
-                .thenThrow(new OrganizationNotFoundException("org-123"));
-            
-            // When & Then
-            assertThatThrownBy(() -> deviceService.createDevice(request))
-                .isInstanceOf(OrganizationNotFoundException.class)
-                .hasMessage("Organization not found: org-123");
-                
-            verify(deviceRepository, never()).save(any());
-        }
-    }
-}
+### Format
 ```
-
-### Frontend Testing Requirements
-
-**Test Coverage Requirements:**
-- **Components**: 80% line coverage minimum
-- **Custom Hooks**: 90% line coverage minimum
-- **Utility Functions**: 95% line coverage minimum
-- **Critical User Flows**: E2E tests required
-
-**Component Testing:**
-```typescript
-// DeviceCard.test.tsx
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { DeviceCard } from '../DeviceCard';
-import { Device, DeviceStatus } from '@/types/device';
-import * as devicesApi from '@/services/api';
-
-// Mock the API module
-jest.mock('@/services/api');
-const mockDevicesApi = devicesApi as jest.Mocked<typeof devicesApi>;
-
-const mockDevice: Device = {
-  id: 'device-123',
-  deviceName: 'Test Device',
-  deviceType: 'DESKTOP',
-  status: DeviceStatus.ONLINE,
-  organizationId: 'org-456',
-  ipAddress: '192.168.1.100',
-  operatingSystem: 'Windows 11',
-  lastSeen: new Date('2024-01-01T10:00:00Z'),
-};
-
-const renderWithProviders = (component: React.ReactElement) => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-  
-  return render(
-    <QueryClientProvider client={queryClient}>
-      {component}
-    </QueryClientProvider>
-  );
-};
-
-describe('DeviceCard', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-  
-  describe('Rendering', () => {
-    test('should display device information correctly', () => {
-      renderWithProviders(<DeviceCard device={mockDevice} />);
-      
-      expect(screen.getByText('Test Device')).toBeInTheDocument();
-      expect(screen.getByText('Type: DESKTOP')).toBeInTheDocument();
-      expect(screen.getByText('IP: 192.168.1.100')).toBeInTheDocument();
-      expect(screen.getByText('OS: Windows 11')).toBeInTheDocument();
-    });
-    
-    test('should display correct status badge styling', () => {
-      renderWithProviders(<DeviceCard device={mockDevice} />);
-      
-      const statusBadge = screen.getByTestId('device-status');
-      expect(statusBadge).toHaveTextContent('ONLINE');
-      expect(statusBadge).toHaveClass('bg-green-100', 'text-green-800');
-    });
-  });
-  
-  describe('Device Actions', () => {
-    test('should execute restart action when button clicked', async () => {
-      const user = userEvent.setup();
-      const onDeviceUpdate = jest.fn();
-      
-      mockDevicesApi.devicesApi.executeAction.mockResolvedValue({ success: true });
-      
-      renderWithProviders(
-        <DeviceCard device={mockDevice} onDeviceUpdate={onDeviceUpdate} />
-      );
-      
-      const restartButton = screen.getByTestId('restart-device-button');
-      await user.click(restartButton);
-      
-      await waitFor(() => {
-        expect(mockDevicesApi.devicesApi.executeAction)
-          .toHaveBeenCalledWith('device-123', 'restart');
-      });
-      
-      await waitFor(() => {
-        expect(onDeviceUpdate).toHaveBeenCalledWith('device-123', 'restart');
-      });
-    });
-    
-    test('should disable restart button for offline devices', () => {
-      const offlineDevice = { ...mockDevice, status: DeviceStatus.OFFLINE };
-      
-      renderWithProviders(<DeviceCard device={offlineDevice} />);
-      
-      const restartButton = screen.getByTestId('restart-device-button');
-      expect(restartButton).toBeDisabled();
-    });
-  });
-});
-```
-
-## Git Workflow
-
-### Branch Naming Convention
-
-```text
-Feature Branches:     feature/[issue-number]-brief-description
-Bug Fixes:           bugfix/[issue-number]-brief-description  
-Hotfixes:            hotfix/[issue-number]-brief-description
-Documentation:       docs/[topic]-brief-description
-Refactoring:         refactor/[component]-brief-description
-
-Examples:
-feature/123-device-status-monitoring
-bugfix/456-device-card-rendering-issue
-hotfix/789-critical-security-patch
-docs/api-documentation-update
-refactor/device-service-cleanup
-```
-
-### Commit Message Convention
-
-We follow **Conventional Commits** specification:
-
-```text
 <type>[optional scope]: <description>
 
 [optional body]
@@ -627,540 +436,336 @@ We follow **Conventional Commits** specification:
 [optional footer(s)]
 ```
 
-**Types:**
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation changes
-- `style`: Code style changes (formatting, etc.)
-- `refactor`: Code refactoring
-- `test`: Adding or updating tests
-- `chore`: Maintenance tasks
+### Types
+- **feat**: New feature
+- **fix**: Bug fix
+- **docs**: Documentation changes
+- **style**: Code style changes (formatting, etc.)
+- **refactor**: Code refactoring
+- **perf**: Performance improvements
+- **test**: Adding or updating tests
+- **ci**: CI/CD changes
+- **chore**: Maintenance tasks
 
-**Examples:**
-```text
-feat(devices): add device restart functionality
+### Examples
+```bash
+feat(auth): add multi-factor authentication support
 
-- Implement device restart API endpoint
-- Add restart button to device card component
-- Include audit logging for restart actions
+Add support for TOTP-based MFA using authenticator apps.
+Includes user enrollment, verification, and recovery codes.
 
 Closes #123
 
-fix(auth): resolve JWT token expiration handling
+fix(api): handle null pointer in user profile endpoint
 
-The token refresh mechanism was not properly handling expired tokens,
-causing users to be logged out unexpectedly.
-
-- Fix token refresh logic in AuthService
-- Add proper error handling for expired tokens
-- Update token refresh tests
+The user profile endpoint was throwing NPE when profile 
+image was null. Added proper null checks and default values.
 
 Fixes #456
 
-docs(api): update device API documentation
+docs(setup): update development environment guide
 
-- Add missing parameters for device listing endpoint
-- Include example responses for all device operations
-- Fix outdated authentication requirements
+Added section for Docker setup and troubleshooting common
+issues with local development environment.
 
-test(components): add tests for DeviceCard component
+test(user): add integration tests for user management
 
-- Add unit tests for device information rendering
-- Test device action button interactions
-- Include accessibility testing
-
-chore(deps): update Spring Boot to 3.3.1
-
-- Update parent dependency version
-- Resolve deprecated method usage
-- Update related test configurations
+Added comprehensive integration tests covering user CRUD
+operations, validation, and security checks.
 ```
 
-### Pull Request Process
+## Pull Request Process
 
-#### 1. Before Creating PR
+### 1. Pre-submission Checklist
+
+- [ ] **Code Quality**: Follows style guidelines and conventions
+- [ ] **Tests**: All tests pass and new tests added for changes
+- [ ] **Documentation**: Updated relevant documentation
+- [ ] **Security**: No security vulnerabilities introduced
+- [ ] **Performance**: No performance regressions
+- [ ] **Breaking Changes**: Clearly documented if any
+
+### 2. Creating Pull Request
 
 ```bash
-# Ensure you're on the latest main branch
-git checkout main
-git pull upstream main
+# Push your changes
+git push origin feature/your-feature-name
 
-# Create and checkout your feature branch
-git checkout -b feature/123-device-status-monitoring
-
-# Make your changes and commit
-git add .
-git commit -m "feat(devices): add device status monitoring"
-
-# Push to your fork
-git push origin feature/123-device-status-monitoring
+# Create pull request on GitHub with:
+# - Descriptive title
+# - Detailed description
+# - Link to related issues
+# - Screenshots if UI changes
 ```
 
-#### 2. PR Template
-
-When creating a pull request, use this template:
+### 3. Pull Request Template
 
 ```markdown
 ## Description
-Brief description of the changes and their purpose.
-
-## Related Issue
-Closes #[issue-number]
+Brief description of what this PR does.
 
 ## Type of Change
 - [ ] Bug fix (non-breaking change which fixes an issue)
 - [ ] New feature (non-breaking change which adds functionality)
 - [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
 - [ ] Documentation update
-- [ ] Performance improvement
-- [ ] Code refactoring
 
-## How Has This Been Tested?
+## Related Issues
+Closes #123
+Fixes #456
+
+## Testing
 - [ ] Unit tests pass
 - [ ] Integration tests pass
 - [ ] Manual testing completed
-- [ ] E2E tests pass
-
-## Testing Details
-Describe the specific tests you've added or modified.
+- [ ] New tests added for changes
 
 ## Screenshots (if applicable)
-Include screenshots for UI changes.
+Before: [screenshot]
+After: [screenshot]
 
 ## Checklist
-- [ ] My code follows the project's style guidelines
+- [ ] My code follows the style guidelines
 - [ ] I have performed a self-review of my code
 - [ ] I have commented my code, particularly in hard-to-understand areas
 - [ ] I have made corresponding changes to the documentation
 - [ ] My changes generate no new warnings
 - [ ] I have added tests that prove my fix is effective or that my feature works
 - [ ] New and existing unit tests pass locally with my changes
-- [ ] Any dependent changes have been merged and published
-
-## Additional Notes
-Any additional information or context about the changes.
 ```
 
-#### 3. PR Review Process
+### 4. Review Process
 
-**Automated Checks:**
-- ✅ All tests pass (unit, integration, E2E)
-- ✅ Code coverage meets minimum requirements
-- ✅ Security scans pass
-- ✅ Code style checks pass
-- ✅ Build succeeds
+**For Reviewers:**
+- **Code Quality**: Check adherence to style and patterns
+- **Functionality**: Verify changes work as intended
+- **Tests**: Ensure adequate test coverage
+- **Security**: Review for security implications
+- **Performance**: Check for performance impacts
+- **Documentation**: Verify docs are updated
 
-**Manual Review:**
-1. **Code Quality Review** - Code structure, maintainability, performance
-2. **Security Review** - Security implications, input validation, access control
-3. **Architecture Review** - Design patterns, component boundaries, scalability
-4. **Documentation Review** - Code comments, API documentation, user guides
+**Review Comments Format:**
+```markdown
+**Suggestion**: Consider using Optional.ofNullable() here for better null safety.
 
-**Approval Requirements:**
-- ✅ **2 approvals** from maintainers for major features
-- ✅ **1 approval** from maintainer for bug fixes and minor changes
-- ✅ **Security team approval** for security-related changes
-- ✅ **All automated checks** must pass
+**Issue**: This method is missing input validation.
 
-### Code Review Guidelines
+**Nitpick**: Variable name could be more descriptive.
 
-#### For Reviewers
+**Question**: Why was this approach chosen over the existing pattern?
 
-**What to Look For:**
-
-```text
-Code Quality
-├── Readability and clarity
-├── Proper error handling
-├── Performance implications
-├── Memory usage patterns
-└── Resource cleanup
-
-Security
-├── Input validation
-├── SQL/NoSQL injection prevention
-├── XSS prevention
-├── Authentication/authorization checks
-└── Sensitive data handling
-
-Architecture
-├── Separation of concerns
-├── Design pattern usage
-├── Component boundaries
-├── Scalability considerations
-└── Database design
-
-Testing
-├── Test coverage adequacy
-├── Test quality and reliability
-├── Edge case coverage
-├── Integration test completeness
-└── Performance test considerations
+**Approval**: LGTM! Great work on the comprehensive tests.
 ```
 
-**Review Comment Examples:**
+## Review Checklist
 
-```text
-# Constructive feedback
-"Consider using Optional.ofNullable() here to handle potential null values more gracefully."
+### Code Review Criteria
 
-"This database query might be inefficient with large datasets. Consider adding pagination or indexing."
+#### Functionality
+- [ ] Code does what it's supposed to do
+- [ ] Edge cases are handled properly
+- [ ] Error conditions are handled gracefully
+- [ ] Performance is acceptable
 
-"The error message could be more user-friendly. Consider providing actionable guidance."
+#### Code Quality
+- [ ] Code is readable and self-documenting
+- [ ] Functions/methods have single responsibility
+- [ ] No code duplication
+- [ ] Proper abstraction levels
+- [ ] Follows established patterns
 
-# Positive reinforcement
-"Great use of the builder pattern here! It makes the code much more readable."
+#### Security
+- [ ] Input validation is present
+- [ ] No security vulnerabilities introduced
+- [ ] Authentication/authorization properly implemented
+- [ ] Sensitive data is protected
 
-"Excellent test coverage for the edge cases."
+#### Testing
+- [ ] Adequate test coverage
+- [ ] Tests are meaningful and test the right things
+- [ ] Tests are maintainable
+- [ ] No flaky tests
 
-"Nice refactoring - this is much cleaner than the previous implementation."
-```
+#### Documentation
+- [ ] Code is properly documented
+- [ ] API documentation is updated
+- [ ] README files are current
+- [ ] Breaking changes are documented
 
-#### For Contributors
+### Common Review Issues
 
-**Responding to Reviews:**
-
-1. **Be Receptive** - Reviews are meant to improve code quality
-2. **Ask Questions** - If feedback isn't clear, ask for clarification
-3. **Explain Decisions** - If you disagree, explain your reasoning respectfully
-4. **Make Changes** - Address feedback promptly and thoroughly
-5. **Test Changes** - Ensure all fixes work as expected
-
-## Documentation Standards
-
-### Code Documentation
-
-**Javadoc Requirements:**
+**Backend Code:**
 ```java
-/**
- * Service for managing device lifecycle operations within the OpenFrame platform.
- * 
- * <p>This service provides comprehensive device management functionality including
- * registration, monitoring, configuration, and decommissioning. All operations
- * are tenant-aware and enforce proper security boundaries.
- * 
- * <h2>Security Considerations</h2>
- * <ul>
- *   <li>All operations require valid tenant context</li>
- *   <li>Cross-tenant access is prevented at the service layer</li>
- *   <li>Device access is restricted by organization membership</li>
- * </ul>
- * 
- * <h2>Performance Considerations</h2>
- * <p>Device queries are optimized with compound indexes on (tenantId, organizationId, status).
- * Large result sets are automatically paginated to prevent memory issues.
- * 
- * @author OpenFrame Team
- * @since 1.0.0
- * @see Device
- * @see DeviceRepository
- * @see OrganizationService
- */
-@Service
-@Transactional(readOnly = true)
-public class DeviceService {
+// ❌ Bad: Missing input validation
+public User createUser(CreateUserRequest request) {
+    return userRepository.save(new User(request));
+}
+
+// ✅ Good: Proper validation and error handling
+public UserResponse createUser(CreateUserRequest request) {
+    validateCreateUserRequest(request);
     
-    /**
-     * Creates a new device within the specified organization.
-     * 
-     * <p>This method performs the following validations:
-     * <ul>
-     *   <li>Organization exists and user has access</li>
-     *   <li>Device name is unique within the organization</li>
-     *   <li>Device configuration is valid</li>
-     * </ul>
-     * 
-     * @param request the device creation request containing all necessary device information
-     * @return the newly created device with generated ID and audit metadata
-     * @throws OrganizationNotFoundException if the specified organization doesn't exist
-     * @throws DuplicateDeviceException if a device with the same name already exists
-     * @throws ValidationException if the device configuration is invalid
-     * @throws SecurityException if the user doesn't have permission to create devices
-     */
-    @Transactional
-    public Device createDevice(CreateDeviceRequest request) {
-        // Implementation
+    String tenantId = tenantContext.getCurrentTenant();
+    if (userRepository.existsByEmailAndTenantId(request.getEmail(), tenantId)) {
+        throw new UserAlreadyExistsException("User already exists");
     }
+    
+    User user = userMapper.toEntity(request);
+    user.setTenantId(tenantId);
+    user.setPassword(passwordEncoder.encode(request.getPassword()));
+    
+    User savedUser = userRepository.save(user);
+    return userMapper.toResponse(savedUser);
 }
 ```
 
-**TSDoc Requirements:**
+**Frontend Code:**
 ```typescript
-/**
- * Custom hook for managing device operations and state.
- * 
- * Provides device CRUD operations, real-time status updates, and action execution
- * with proper error handling and loading states.
- * 
- * @example
- * ```typescript
- * const { devices, isLoading, executeAction } = useDevices({
- *   organizationId: 'org-123',
- *   filters: { status: DeviceStatus.ONLINE }
- * });
- * 
- * const handleRestart = async (deviceId: string) => {
- *   await executeAction(deviceId, 'restart');
- * };
- * ```
- * 
- * @param options - Configuration options for device management
- * @returns Device management interface with operations and state
- */
-export const useDevices = (options: UseDevicesOptions): UseDevicesReturn => {
-  // Implementation
+// ❌ Bad: No error handling
+const UserProfile = ({ userId }: { userId: string }) => {
+  const [user, setUser] = useState(null);
+  
+  useEffect(() => {
+    apiClient.getUser(userId).then(setUser);
+  }, [userId]);
+  
+  return <div>{user.name}</div>;
+};
+
+// ✅ Good: Proper error handling and loading states
+const UserProfile = ({ userId }: { userId: string }) => {
+  const { data: user, isLoading, error } = useQuery({
+    queryKey: ['user', userId],
+    queryFn: () => apiClient.getUser(userId),
+    enabled: !!userId,
+  });
+  
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error loading user</div>;
+  if (!user) return <div>User not found</div>;
+  
+  return <div>{user.name}</div>;
 };
 ```
 
-### API Documentation
+## Development Best Practices
 
-**OpenAPI Specification:**
+### 1. Test-Driven Development (TDD)
+
 ```java
-@RestController
-@RequestMapping("/api/devices")
-@Tag(name = "Device Management", description = "Operations for managing devices")
-@SecurityRequirement(name = "bearerAuth")
-public class DeviceController {
+// 1. Write failing test
+@Test
+void shouldCreateUserWithHashedPassword() {
+    // Given
+    CreateUserRequest request = new CreateUserRequest("test@example.com", "password");
     
-    @Operation(
-        summary = "Create a new device",
-        description = "Registers a new device within the specified organization. " +
-                     "Requires DEVICE_WRITE permission.",
-        responses = {
-            @ApiResponse(
-                responseCode = "201",
-                description = "Device created successfully",
-                content = @Content(
-                    mediaType = "application/json",
-                    schema = @Schema(implementation = DeviceResponse.class),
-                    examples = @ExampleObject(
-                        name = "Desktop Device",
-                        summary = "Example desktop device creation",
-                        value = """
-                        {
-                          "id": "device-123",
-                          "deviceName": "Office Desktop 01",
-                          "deviceType": "DESKTOP",
-                          "status": "PENDING",
-                          "organizationId": "org-456"
-                        }
-                        """
-                    )
-                )
-            ),
-            @ApiResponse(
-                responseCode = "400",
-                description = "Invalid request data",
-                content = @Content(
-                    mediaType = "application/json",
-                    schema = @Schema(implementation = ErrorResponse.class)
-                )
-            ),
-            @ApiResponse(
-                responseCode = "401", 
-                description = "Authentication required"
-            ),
-            @ApiResponse(
-                responseCode = "403",
-                description = "Insufficient permissions"
-            )
-        }
-    )
-    @PostMapping
-    public ResponseEntity<DeviceResponse> createDevice(
-            @Parameter(
-                description = "Device creation request",
-                required = true,
-                schema = @Schema(implementation = CreateDeviceRequest.class)
-            )
-            @Valid @RequestBody CreateDeviceRequest request) {
-        // Implementation
+    // When & Then
+    assertThatThrownBy(() -> userService.createUser(request))
+        .isInstanceOf(UserAlreadyExistsException.class);
+}
+
+// 2. Write minimal code to pass
+public UserResponse createUser(CreateUserRequest request) {
+    throw new UserAlreadyExistsException("User already exists");
+}
+
+// 3. Refactor to proper implementation
+public UserResponse createUser(CreateUserRequest request) {
+    if (userExists(request.getEmail())) {
+        throw new UserAlreadyExistsException("User already exists");
+    }
+    // ... proper implementation
+}
+```
+
+### 2. Error Handling Patterns
+
+```java
+// Custom exception hierarchy
+public abstract class OpenFrameException extends RuntimeException {
+    protected OpenFrameException(String message, Throwable cause) {
+        super(message, cause);
+    }
+}
+
+public class UserNotFoundException extends OpenFrameException {
+    public UserNotFoundException(String userId) {
+        super("User not found: " + userId, null);
+    }
+}
+
+// Global exception handler
+@ControllerAdvice
+public class GlobalExceptionHandler {
+    
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleUserNotFound(UserNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(new ErrorResponse("USER_NOT_FOUND", e.getMessage()));
     }
 }
 ```
 
-## Release and Deployment
+### 3. Logging Standards
 
-### Semantic Versioning
-
-OpenFrame follows **Semantic Versioning (SemVer)**:
-
-```text
-MAJOR.MINOR.PATCH
-
-MAJOR: Incompatible API changes
-MINOR: Backward-compatible functionality additions  
-PATCH: Backward-compatible bug fixes
-
-Examples:
-1.0.0 - Initial release
-1.1.0 - New device monitoring features
-1.1.1 - Bug fix for device status updates
-2.0.0 - Breaking changes to device API
+```java
+@Service
+public class UserService {
+    
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
+    
+    public UserResponse createUser(CreateUserRequest request) {
+        logger.info("Creating user with email: {}", request.getEmail());
+        
+        try {
+            User user = processUserCreation(request);
+            logger.info("Successfully created user with ID: {}", user.getId());
+            return userMapper.toResponse(user);
+            
+        } catch (Exception e) {
+            logger.error("Failed to create user with email: {}", 
+                request.getEmail(), e);
+            throw e;
+        }
+    }
+}
 ```
 
-### Release Process
+## Community and Support
 
-```bash
-# 1. Create release branch
-git checkout -b release/1.2.0
+### Getting Help
 
-# 2. Update version numbers
-# - pom.xml versions
-# - package.json versions
-# - CHANGELOG.md
+- **Slack Community**: [OpenMSP Slack](https://join.slack.com/t/openmsp/shared_invite/zt-36bl7mx0h-3~U2nFH6nqHqoTPXMaHEHA)
+- **GitHub Discussions**: For technical questions and design discussions
+- **Documentation**: This developer documentation section
+- **Office Hours**: Weekly contributor sync meetings (announced in Slack)
 
-# 3. Run full test suite
-mvn clean verify
-npm run test:all
+### Contributing Areas
 
-# 4. Create release PR
-# Title: "Release v1.2.0"
-# Include changelog and migration notes
+#### High Priority
+- **Bug fixes**: Issues labeled with `bug` and `high-priority`
+- **Security improvements**: Security-related enhancements
+- **Performance optimizations**: Database queries, API response times
+- **Test coverage**: Areas with low test coverage
 
-# 5. After PR approval and merge
-git checkout main
-git pull upstream main
-git tag -a v1.2.0 -m "Release version 1.2.0"
-git push upstream v1.2.0
-```
+#### Medium Priority
+- **Feature enhancements**: New functionality for existing features
+- **Documentation**: Improving developer and user documentation
+- **Developer experience**: Tooling and workflow improvements
+- **Code quality**: Refactoring and cleanup
 
-## Community Guidelines
-
-### Communication
-
-**OpenMSP Slack Community:**
-- **#general** - General discussions
-- **#development** - Development questions and discussions
-- **#bug-reports** - Bug reports and issue discussions
-- **#feature-requests** - Feature suggestions and discussions
-- **#security** - Security-related discussions (private channel)
-
-**Communication Guidelines:**
-- ✅ **Be respectful** and inclusive
-- ✅ **Search existing discussions** before asking questions
-- ✅ **Provide context** when asking for help
-- ✅ **Share knowledge** and help other contributors
-- ❌ **Don't spam** or post off-topic content
-- ❌ **Don't share sensitive information** in public channels
-
-### Issue Reporting
-
-**Bug Reports:**
-```markdown
-## Bug Description
-Brief description of the bug
-
-## Steps to Reproduce
-1. Go to...
-2. Click on...
-3. Scroll down to...
-4. See error
-
-## Expected Behavior
-What should happen instead
-
-## Actual Behavior  
-What actually happens
-
-## Environment
-- OpenFrame Version: [e.g. 1.2.0]
-- Browser: [e.g. Chrome 120.0]
-- OS: [e.g. Windows 11]
-- Java Version: [e.g. 21.0.1]
-- Node.js Version: [e.g. 18.19.0]
-
-## Additional Context
-Screenshots, logs, or other relevant information
-```
-
-**Feature Requests:**
-```markdown
-## Feature Summary
-Brief description of the requested feature
-
-## Problem Statement
-What problem does this feature solve?
-
-## Proposed Solution
-Detailed description of how the feature should work
-
-## Alternative Solutions
-Other approaches you've considered
-
-## Use Cases
-Specific scenarios where this feature would be useful
-
-## Acceptance Criteria
-- [ ] Criterion 1
-- [ ] Criterion 2
-- [ ] Criterion 3
-
-## Additional Context
-Mockups, examples, or related features
-```
+#### Great for Beginners
+- **Documentation fixes**: Typos, clarity improvements
+- **Test additions**: Adding missing unit tests
+- **UI/UX improvements**: Frontend polish and usability
+- **Good first issue**: Issues labeled specifically for newcomers
 
 ### Recognition
 
 Contributors are recognized through:
+- **Contributor list**: In README and documentation
+- **Release notes**: Acknowledgment in version releases
+- **Community highlights**: Featured in community updates
+- **Maintainer track**: Path to becoming a project maintainer
 
-- **GitHub Contributors** page
-- **Release notes** acknowledgments  
-- **Community highlights** in Slack
-- **Special contributor** badges
-- **Annual contributor** awards
-
-## Getting Help
-
-### Resources
-
-1. **Documentation** - Start with our comprehensive guides
-2. **Slack Community** - Ask questions and get real-time help
-3. **GitHub Discussions** - In-depth technical discussions
-4. **Code Reviews** - Learn from feedback on your contributions
-5. **Mentorship** - Senior contributors available for guidance
-
-### Troubleshooting
-
-**Common Issues:**
-
-```bash
-# Build fails with dependency issues
-mvn clean install -U
-
-# Frontend tests failing
-cd openframe/services/openframe-frontend
-rm -rf node_modules package-lock.json
-npm install
-
-# Code style errors
-mvn spotless:apply  # Backend
-npm run format     # Frontend
-
-# Git issues
-git checkout main
-git pull upstream main
-git branch -d old-feature-branch
-```
-
-### Mentorship Program
-
-New contributors can request mentorship:
-
-1. **Join OpenMSP Slack** community
-2. **Introduce yourself** in #general
-3. **Express interest** in contributing
-4. **Request mentor assignment** in #development
-5. **Start with good first issues**
-
-## Next Steps
-
-Ready to contribute? Here's your path:
-
-1. ✅ **Set up development environment** - [Environment Setup](../setup/environment.md)
-2. ✅ **Pick an issue** - Look for "good first issue" labels
-3. ✅ **Join Slack community** - [OpenMSP Slack](https://join.slack.com/t/openmsp/shared_invite/zt-36bl7mx0h-3~U2nFH6nqHqoTPXMaHEHA)
-4. ✅ **Create your first PR** - Follow this guide
-5. ✅ **Engage with the community** - Help others and share knowledge
-
-Welcome to the OpenFrame community! We're excited to have you contribute to the future of open-source MSP platforms. 🚀
+Thank you for contributing to OpenFrame! Your efforts help build a better MSP platform for the community. 🚀

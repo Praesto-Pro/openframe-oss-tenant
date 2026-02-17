@@ -1,7 +1,5 @@
 flowchart TD
-    Controller["@RestController"] --> Service["Domain Service"]
-    Service --> Repository["Mongo Repository"]
-    Repository --> MongoDB["MongoDB"]
-
-    GraphQL["@DgsQuery"] --> DataLoader["DataLoader"]
-    DataLoader --> Repository
+    Browser --> AuthServer
+    AuthServer --> Mongo
+    AuthServer --> TenantKeyService["Tenant Key Service"]
+    TenantKeyService --> RSA["Per-Tenant RSA Keys"]

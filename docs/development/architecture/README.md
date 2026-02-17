@@ -1,386 +1,342 @@
 # Architecture Overview
 
-OpenFrame is a modern, microservices-based platform designed for enterprise-scale MSP operations. This document provides a comprehensive overview of the system architecture, design decisions, and component relationships.
+This document provides a comprehensive overview of OpenFrame's architecture, component relationships, design decisions, and system structure. Understanding this architecture is essential for effective development and contribution to the platform.
 
 ## High-Level Architecture
+
+OpenFrame follows a modern, event-driven microservices architecture designed for scalability, maintainability, and multi-tenant operation.
+
+### System Architecture Diagram
 
 ```mermaid
 flowchart TB
     subgraph "Client Layer"
-        Browser[Web Browser]
-        ChatClient[OpenFrame Chat<br/>Tauri Desktop App]
-        AgentClient[OpenFrame Agent<br/>Rust Client]
+        Browser[Tenant Frontend<br/>React/Next.js]
+        Agent[OpenFrame Agent<br/>Rust Client]
+        ExternalClient[External APIs<br/>Third-party Integration]
     end
 
-    subgraph "Edge Layer"
-        Gateway[Gateway Service<br/>Spring Cloud Gateway<br/>:8082]
-        LB[Load Balancer<br/>nginx/HAProxy]
+    subgraph "Gateway Layer"
+        Gateway[API Gateway<br/>Spring Cloud Gateway]
     end
 
-    subgraph "Identity Layer"
-        Auth[Authorization Server<br/>OAuth2/OIDC<br/>:8081]
-        SSO[SSO Providers<br/>Google/Microsoft]
+    subgraph "Service Layer"
+        AuthZ[Authorization Server<br/>OAuth2/OIDC]
+        API[API Service Core<br/>REST + GraphQL]
+        External[External API Service<br/>Public REST API]
+        Client[Client Service Core<br/>Agent Management]
+        Management[Management Service<br/>Operations]
+        Stream[Stream Service<br/>Event Processing]
     end
 
-    subgraph "Application Layer"
-        API[API Service<br/>REST + GraphQL<br/>:8080]
-        Frontend[Frontend Service<br/>Next.js + React<br/>:3000]
-        Client[Client Service<br/>Agent Communication<br/>:8083]
-        External[External API Service<br/>Tool Integration<br/>:8085]
-    end
-
-    subgraph "Processing Layer"
-        Stream[Stream Service<br/>Event Processing<br/>:8084]
-        Management[Management Service<br/>System Bootstrap<br/>:8086]
+    subgraph "Messaging Layer"
+        NATS[NATS JetStream<br/>Real-time Messaging]
+        Kafka[Apache Kafka<br/>Event Streaming]
     end
 
     subgraph "Data Layer"
-        Mongo[(MongoDB<br/>Primary Data)]
-        Kafka[(Apache Kafka<br/>Event Streaming)]
-        Cassandra[(Cassandra<br/>Time-Series)]
-        Pinot[(Apache Pinot<br/>Analytics)]
-        NATS[(NATS JetStream<br/>Real-time Messaging)]
+        MongoDB[(MongoDB<br/>Primary Storage)]
+        Cassandra[(Cassandra<br/>Audit Storage)]
         Redis[(Redis<br/>Caching)]
     end
 
-    Browser --> LB
-    ChatClient --> LB
-    AgentClient --> LB
-    LB --> Gateway
-    
-    Gateway --> Auth
+    Browser --> Gateway
+    Agent --> Client
+    Agent --> NATS
+    ExternalClient --> Gateway
+
+    Gateway --> AuthZ
     Gateway --> API
-    Gateway --> Frontend
-    Gateway --> Client
     Gateway --> External
-    
-    Auth --> SSO
-    Auth --> Mongo
-    
-    API --> Stream
-    API --> Mongo
-    Stream --> Kafka
+    Gateway --> Client
+
+    NATS --> Client
+    Client --> Kafka
+    Kafka --> Stream
     Stream --> Cassandra
-    Stream --> Pinot
-    
-    Client --> NATS
-    Management --> Kafka
-    Management --> Mongo
-    
+    Stream --> MongoDB
+
+    API --> MongoDB
+    AuthZ --> MongoDB
+    Management --> MongoDB
+    Client --> MongoDB
+
+    Stream --> Redis
     API --> Redis
 ```
 
-## Core Design Principles
+## Core Components
 
-### 1. Event-Driven Architecture
+### 1. Frontend Application (Tenant UI)
 
-OpenFrame follows event-driven patterns using Apache Kafka as the central event bus:
-
-```mermaid
-flowchart LR
-    Command[Domain Command] --> Service[Domain Service]
-    Service --> Event[Domain Event]
-    Event --> Kafka[Kafka Topic]
-    Kafka --> Handler1[Event Handler 1]
-    Kafka --> Handler2[Event Handler 2]
-    Kafka --> Handler3[Event Handler 3]
-    Handler1 --> View1[Materialized View 1]
-    Handler2 --> View2[Materialized View 2]
-    Handler3 --> Action[Side Effect Action]
-```
-
-**Benefits:**
-- **Loose coupling** between services
-- **Scalability** through asynchronous processing
-- **Resilience** with event replay capabilities
-- **Auditability** with complete event history
-
-### 2. Multi-Tenant by Design
-
-Every service is built with multi-tenancy as a first-class citizen:
-
-```mermaid
-flowchart TD
-    Request[HTTP Request] --> TenantFilter[Tenant Context Filter]
-    TenantFilter --> TenantContext[ThreadLocal TenantContext]
-    TenantContext --> Service[Domain Service]
-    Service --> Repository[Tenant-Aware Repository]
-    Repository --> Query[Tenant-Filtered Queries]
-    Query --> Database[MongoDB]
-```
-
-**Implementation:**
-- **Tenant Context**: ThreadLocal isolation per request
-- **Data Partitioning**: Tenant ID in all database queries
-- **Resource Isolation**: Per-tenant rate limits and quotas
-- **Security Boundaries**: Cross-tenant data access prevention
-
-### 3. API-First Development
-
-All functionality is exposed through well-defined APIs:
-
-| API Type | Purpose | Technology |
-|----------|---------|------------|
-| **REST** | CRUD operations, external integrations | Spring WebMVC |
-| **GraphQL** | Complex queries, real-time subscriptions | Netflix DGS |
-| **WebSocket** | Real-time bidirectional communication | Spring WebFlux |
-| **gRPC** | Internal service-to-service communication | Spring Cloud |
-
-### 4. Security by Design
-
-Security is integrated at every architectural layer:
-
-```mermaid
-flowchart TD
-    Client[Client Request] --> Gateway[API Gateway]
-    Gateway --> JWT[JWT Validation]
-    JWT --> RBAC[Role-Based Access Control]
-    RBAC --> RateLimit[Rate Limiting]
-    RateLimit --> Downstream[Downstream Service]
-    Downstream --> Audit[Audit Logging]
-```
-
-## Service Architecture
-
-### Core Services
-
-#### API Service (:8080)
-**Primary business logic service**
+**Technology Stack:**
+- Next.js with TypeScript
+- VoltAgent Core for AI functionality
+- Anthropic SDK for Claude integration
+- Zod for validation
+- Glob for file operations
 
 **Responsibilities:**
-- REST API endpoints for CRUD operations
-- Netflix DGS GraphQL schema and resolvers
-- Business rule enforcement
-- Data validation and transformation
+- Multi-tenant SaaS user interface
+- Real-time updates via WebSocket connections
+- AI assistant (Mingo) integration
+- Device management and remote access
+- User and organization management
 
-**Key Components:**
-```text
-openframe-api-service-core/
-├── controller/          # REST controllers
-├── datafetcher/        # GraphQL data fetchers
-├── service/           # Business logic services
-├── dto/              # Data transfer objects
-└── mapper/           # Entity-DTO mapping
-```
-
-**Design Patterns:**
-- **Controller → Service → Repository** layering
-- **Command Query Responsibility Segregation** (CQRS)
-- **DataLoader pattern** for GraphQL N+1 prevention
-
-#### Authorization Server (:8081)
-**OAuth2/OIDC identity provider**
-
-**Responsibilities:**
-- JWT token issuance and validation
-- Multi-tenant SSO integration
-- User registration and invitation flows
-- Per-tenant RSA key management
+### 2. API Gateway (Spring Cloud Gateway)
 
 **Key Features:**
-- **Spring Authorization Server** framework
-- **PKCE support** for secure authentication flows
-- **Dynamic client registration** for tenants
-- **SSO integration** with Google, Microsoft, custom OIDC
-
-#### Gateway Service (:8082)
-**Edge routing and security**
-
-**Responsibilities:**
-- Request routing to downstream services
-- JWT token validation and extraction
+- JWT token validation
+- API key authentication
+- Request routing and load balancing
+- CORS handling
 - Rate limiting and throttling
-- CORS and security headers
-- WebSocket proxy for real-time features
 
-**Routing Rules:**
-```yaml
-spring:
-  cloud:
-    gateway:
-      routes:
-        - id: api-route
-          uri: http://api-service:8080
-          predicates:
-            - Path=/api/**
-        - id: auth-route
-          uri: http://auth-service:8081
-          predicates:
-            - Path=/oauth/**, /sas/**
-```
-
-### Supporting Services
-
-#### Stream Service (:8084)
-**Event processing and analytics**
-
-**Responsibilities:**
-- Kafka event consumption and processing
-- Real-time event transformation
-- Data enrichment from external sources
-- Analytics pipeline feeding
-
-**Event Processing Flow:**
+**Architecture Pattern:**
 ```mermaid
 flowchart LR
-    KafkaIn[Kafka Input] --> Deserializer[Event Deserializer]
-    Deserializer --> Enrichment[Data Enrichment]
-    Enrichment --> Transform[Event Transformation]
-    Transform --> Multiple[Multiple Outputs]
-    Multiple --> Cassandra[Cassandra Storage]
-    Multiple --> Pinot[Pinot Analytics]
-    Multiple --> Webhook[Webhook Notifications]
+    Client[Client Request] --> Auth[Authentication Filter]
+    Auth --> Route[Route Resolution]
+    Route --> Service[Target Service]
+    Service --> Response[Response Transform]
+    Response --> Client
 ```
 
-#### Client Service (:8083)
-**Agent communication hub**
+### 3. Authorization Server (OAuth2/OIDC)
 
-**Responsibilities:**
-- OpenFrame agent registration and authentication
-- Real-time agent communication via NATS
+**Capabilities:**
+- Multi-tenant identity management
+- OAuth2 authorization code flow
+- JWT token issuance and validation
+- SSO integration (Google, Microsoft)
+- Per-tenant RSA key management
+
+**Token Flow:**
+```mermaid
+sequenceDiagram
+    participant Client
+    participant AuthServer as Authorization Server
+    participant ResourceServer as API Service
+    participant Database as MongoDB
+
+    Client->>AuthServer: Authentication Request
+    AuthServer->>Database: Validate Credentials
+    AuthServer->>Client: Authorization Code
+    Client->>AuthServer: Exchange for Token
+    AuthServer->>Client: JWT Access Token
+    Client->>ResourceServer: API Request + Token
+    ResourceServer->>AuthServer: Validate Token
+    ResourceServer->>Client: Protected Resource
+```
+
+### 4. API Service Core
+
+**Features:**
+- REST endpoints for mutations/commands
+- GraphQL queries via Netflix DGS
+- Device and organization management
+- User and permission management
+- Log and event querying
+
+**Data Access Pattern:**
+```mermaid
+flowchart TD
+    Controller[REST Controller] --> Service[Business Service]
+    DataFetcher[GraphQL DataFetcher] --> Service
+    Service --> Repository[MongoDB Repository]
+    Service --> Cache[Redis Cache]
+    Service --> EventPublisher[Kafka Producer]
+```
+
+### 5. Client Service Core
+
+**Purpose:**
+- Agent registration and authentication
+- Device heartbeat processing
+- Tool connection management
 - Agent command distribution
-- Heartbeat and status monitoring
 
-#### Management Service (:8086)
-**System administration and bootstrapping**
+**Agent Communication:**
+```mermaid
+sequenceDiagram
+    participant Agent as OpenFrame Agent
+    participant Client as Client Service
+    participant NATS as NATS JetStream
+    participant Database as MongoDB
 
-**Responsibilities:**
-- Database schema initialization
-- Background task scheduling
-- System health monitoring
-- Configuration management
+    Agent->>Client: Registration Request
+    Client->>Database: Store Agent Info
+    Client->>Agent: OAuth Token
+    Agent->>NATS: Heartbeat Messages
+    NATS->>Client: Process Heartbeats
+    Client->>Database: Update Device Status
+```
 
-#### External API Service (:8085)
-**Third-party tool integration**
+## Data Flow and Event Streaming
 
-**Responsibilities:**
-- Fleet MDM integration
-- Tactical RMM integration
-- Custom tool connector framework
-- API key management for external services
+### Event-Driven Architecture
+
+OpenFrame uses an event-driven approach for loose coupling and scalability:
+
+```mermaid
+flowchart LR
+    subgraph "Event Sources"
+        Agent[Agent Events]
+        API[API Commands]
+        External[External Systems]
+    end
+
+    subgraph "Event Streams"
+        NATS[NATS JetStream<br/>Real-time]
+        Kafka[Kafka<br/>Durable]
+    end
+
+    subgraph "Event Processors"
+        Stream[Stream Service]
+        Listeners[Event Listeners]
+    end
+
+    subgraph "Data Stores"
+        MongoDB[(MongoDB)]
+        Cassandra[(Cassandra)]
+    end
+
+    Agent --> NATS
+    API --> Kafka
+    External --> Kafka
+    
+    NATS --> Stream
+    Kafka --> Stream
+    Kafka --> Listeners
+    
+    Stream --> MongoDB
+    Stream --> Cassandra
+    Listeners --> MongoDB
+```
+
+### Message Patterns
+
+#### 1. Command Pattern (NATS)
+- Agent commands and responses
+- Real-time device communication
+- Tool installation messages
+
+#### 2. Event Sourcing (Kafka)
+- Audit trail for compliance
+- State change notifications
+- Integration events
+
+#### 3. CQRS (Command Query Responsibility Segregation)
+- Commands: REST API mutations
+- Queries: GraphQL and filtered endpoints
+- Separate read/write optimizations
 
 ## Data Architecture
 
-### Primary Database - MongoDB
+### Primary Storage (MongoDB)
 
-**Purpose**: Transactional data storage with multi-tenant support
-
-**Design Patterns:**
-- **Document-per-tenant** for tenant isolation
-- **Embedded documents** for one-to-many relationships
-- **Reference documents** for many-to-many relationships
-- **Compound indexes** for tenant + business key queries
-
-**Core Collections:**
+**Collections Structure:**
 ```text
-tenants              # Tenant configuration and metadata
-users               # User accounts and profiles
-organizations       # Customer organizations
-devices             # Managed devices and assets
-events              # System and business events
-api_keys            # API authentication tokens
-sso_configs         # SSO provider configurations
+MongoDB Collections:
+├── organizations           # Tenant organizations
+├── users                  # User accounts and profiles
+├── devices               # Managed devices/machines
+├── installedAgents       # Agent registrations
+├── toolConnections       # Tool integrations
+├── apiKeys              # API access credentials
+├── events               # System events
+├── invitations          # User invitations
+└── ssoConfigs           # SSO configurations
 ```
 
-**Indexing Strategy:**
-```javascript
-// Tenant-aware compound indexes
-db.devices.createIndex({"tenantId": 1, "organizationId": 1, "status": 1})
-db.events.createIndex({"tenantId": 1, "timestamp": -1, "eventType": 1})
-db.users.createIndex({"tenantId": 1, "email": 1}, {unique: true})
+**Document Relationships:**
+```mermaid
+erDiagram
+    Organization ||--o{ User : has
+    Organization ||--o{ Device : manages
+    User ||--o{ ApiKey : owns
+    Device ||--o{ InstalledAgent : runs
+    Device ||--o{ ToolConnection : connects
+    Organization ||--o{ Invitation : sends
+    Organization ||--|| SsoConfig : configures
 ```
 
-### Event Streaming - Apache Kafka
+### Audit Storage (Cassandra)
 
-**Purpose**: Event sourcing and real-time data pipeline
+**Purpose:**
+- Immutable audit logs
+- High-volume event storage
+- Compliance and reporting data
+- Time-series data for analytics
 
-**Topic Design:**
-```text
-openframe.devices.events     # Device lifecycle events
-openframe.users.events       # User activity events  
-openframe.security.events    # Security-related events
-openframe.integrations.events # External tool events
-openframe.audit.events       # Audit trail events
-```
-
-**Partitioning Strategy:**
-- **Tenant ID** as partition key for tenant isolation
-- **Device ID** as secondary partition key for device events
-- **User ID** as partition key for user events
-
-### Time-Series Storage - Apache Cassandra
-
-**Purpose**: High-volume time-series data with retention policies
-
-**Keyspace Design:**
-```sql
--- Metrics keyspace for time-series data
-CREATE KEYSPACE openframe_metrics 
-WITH replication = {
-  'class': 'SimpleStrategy',
-  'replication_factor': 3
-};
-
--- Device metrics table
-CREATE TABLE device_metrics (
+**Schema Design:**
+```cql
+CREATE TABLE unified_log_events (
     tenant_id UUID,
-    device_id UUID,
-    metric_type text,
-    timestamp timestamp,
-    value double,
-    metadata map<text, text>,
-    PRIMARY KEY ((tenant_id, device_id, metric_type), timestamp)
-) WITH CLUSTERING ORDER BY (timestamp DESC)
-  AND gc_grace_seconds = 86400
-  AND compaction = {'class': 'TimeWindowCompactionStrategy'};
+    event_date DATE,
+    event_time TIMESTAMP,
+    event_id UUID,
+    event_type TEXT,
+    source_system TEXT,
+    data MAP<TEXT, TEXT>,
+    PRIMARY KEY ((tenant_id, event_date), event_time, event_id)
+) WITH CLUSTERING ORDER BY (event_time DESC);
 ```
 
-### Analytics - Apache Pinot
+### Caching Strategy (Redis)
 
-**Purpose**: Real-time analytics and OLAP queries
+**Cache Patterns:**
+- **Session Storage**: User session data
+- **Device Status Cache**: Real-time device states
+- **API Response Cache**: Frequently accessed data
+- **Rate Limiting**: API throttling counters
 
-**Table Schema:**
-```json
-{
-  "schemaName": "deviceMetrics",
-  "dimensionFieldSpecs": [
-    {"name": "tenantId", "dataType": "STRING"},
-    {"name": "deviceId", "dataType": "STRING"},
-    {"name": "deviceType", "dataType": "STRING"},
-    {"name": "organizationId", "dataType": "STRING"}
-  ],
-  "metricFieldSpecs": [
-    {"name": "cpuUsage", "dataType": "DOUBLE"},
-    {"name": "memoryUsage", "dataType": "DOUBLE"},
-    {"name": "diskUsage", "dataType": "DOUBLE"}
-  ],
-  "dateTimeFieldSpecs": [
-    {
-      "name": "timestamp",
-      "dataType": "TIMESTAMP",
-      "format": "1:MILLISECONDS:EPOCH",
-      "granularity": "1:MINUTES"
-    }
-  ]
+## Multi-Tenancy Design
+
+### Tenant Isolation Strategies
+
+#### 1. Database-Level Isolation
+```java
+// Tenant context in Spring Data MongoDB
+@Document(collection = "#{tenantContext.getCollection('users')}")
+public class User {
+    private String tenantId;
+    // ... other fields
 }
 ```
 
-### Caching - Redis
+#### 2. Service-Level Isolation
+```java
+@Component
+@TenantScope
+public class TenantAwareService {
+    public List<Device> getDevices() {
+        String tenantId = TenantContext.getCurrentTenant();
+        return deviceRepository.findByTenantId(tenantId);
+    }
+}
+```
 
-**Purpose**: Application-level caching and session storage
+#### 3. Security Context Isolation
+```java
+// JWT token contains tenant information
+{
+  "sub": "user@tenant.com",
+  "tenant_id": "tenant-uuid",
+  "tenant_slug": "tenant-name",
+  "roles": ["ADMIN", "USER"]
+}
+```
 
-**Cache Patterns:**
-- **User sessions** with TTL-based expiration
-- **API response caching** for expensive queries
-- **Rate limiting counters** with sliding windows
-- **Real-time data** for dashboard updates
+### Tenant-Aware Components
 
-**Key Patterns:**
-```text
-session:{tenantId}:{userId}          # User session data
-cache:devices:{tenantId}:{orgId}     # Device list cache
-ratelimit:{apiKey}:{endpoint}:{window} # Rate limiting counters
-realtime:dashboard:{tenantId}        # Real-time dashboard data
+```mermaid
+flowchart TD
+    Request[HTTP Request] --> TenantFilter[Tenant Resolution Filter]
+    TenantFilter --> TenantContext[Tenant Context]
+    TenantContext --> Service[Business Service]
+    Service --> Repository[Tenant-Aware Repository]
+    Repository --> Database[(Tenant-Partitioned Data)]
 ```
 
 ## Security Architecture
@@ -389,306 +345,190 @@ realtime:dashboard:{tenantId}        # Real-time dashboard data
 
 ```mermaid
 sequenceDiagram
-    participant Client
+    participant Browser
     participant Gateway
     participant AuthServer
-    participant API
+    participant APIService
     participant Database
 
-    Client->>Gateway: Request with JWT
-    Gateway->>AuthServer: Validate JWT
-    AuthServer-->>Gateway: JWT Claims
-    Gateway->>Gateway: Extract Tenant Context
-    Gateway->>API: Request + Tenant Headers
-    API->>API: Set Tenant Context
-    API->>Database: Tenant-filtered Query
-    Database-->>API: Results
-    API-->>Gateway: Response
-    Gateway-->>Client: Response
+    Browser->>Gateway: Request with no token
+    Gateway->>AuthServer: Redirect to login
+    Browser->>AuthServer: Login credentials
+    AuthServer->>Database: Validate user
+    AuthServer->>Browser: OAuth authorization code
+    Browser->>AuthServer: Exchange code for token
+    AuthServer->>Browser: JWT access token
+    Browser->>Gateway: API request + JWT
+    Gateway->>APIService: Validated request + user context
 ```
 
-### Authorization Model
+### Authorization Patterns
 
-**Role-Based Access Control (RBAC):**
-
-```text
-Tenant Administrator
-├── Full tenant management access
-├── User and organization management
-├── System configuration access
-└── All data access within tenant
-
-Organization Administrator  
-├── Organization-specific management
-├── User management within organization
-├── Device management within organization
-└── Limited system configuration
-
-Technician
-├── Device monitoring and management
-├── Ticket resolution access
-├── Script execution permissions
-└── Read-only organization data
-
-Viewer
-├── Dashboard and report access
-├── Read-only device information
-├── Limited audit log access
-└── No management capabilities
-```
-
-### API Security
-
-**JWT Token Structure:**
-```json
-{
-  "header": {
-    "alg": "RS256",
-    "typ": "JWT",
-    "kid": "tenant-123-key-1"
-  },
-  "payload": {
-    "sub": "user-456",
-    "iss": "https://auth.openframe.ai",
-    "aud": "openframe-api",
-    "exp": 1640995200,
-    "iat": 1640991600,
-    "tenantId": "tenant-123",
-    "roles": ["TENANT_ADMIN"],
-    "organizationId": "org-789"
-  }
-}
-```
-
-**Rate Limiting Strategy:**
-| Endpoint Type | Rate Limit | Window |
-|---------------|------------|--------|
-| **Authentication** | 10 requests | 1 minute |
-| **API (authenticated)** | 1000 requests | 1 hour |
-| **API (public)** | 100 requests | 1 hour |
-| **GraphQL** | 500 operations | 1 hour |
-| **WebSocket** | 100 connections | per user |
-
-## Integration Architecture
-
-### External Tool Integration
-
-OpenFrame integrates with existing MSP tools through a unified connector framework:
-
-```mermaid
-flowchart TD
-    OpenFrame[OpenFrame Core] --> Connector[Tool Connector Framework]
-    Connector --> Fleet[Fleet MDM Connector]
-    Connector --> Tactical[Tactical RMM Connector]
-    Connector --> Custom[Custom Tool Connector]
-    
-    Fleet --> FleetAPI[Fleet API]
-    Tactical --> TacticalAPI[Tactical RMM API]
-    Custom --> CustomAPI[Custom Tool API]
-```
-
-**Connector Pattern:**
+#### Role-Based Access Control (RBAC)
 ```java
-@Component
-public class FleetMdmConnector implements ToolConnector {
-    
-    @Override
-    public String getToolType() {
-        return "FLEET_MDM";
-    }
-    
-    @Override
-    public CompletableFuture<DeviceInfo> getDeviceInfo(String deviceId) {
-        // Implementation for Fleet API integration
-    }
-    
-    @Override
-    public CompletableFuture<List<PolicyViolation>> checkCompliance(String deviceId) {
-        // Implementation for compliance checking
-    }
+@PreAuthorize("hasRole('ADMIN') or hasRole('TECHNICIAN')")
+public DeviceResponse updateDevice(String deviceId, UpdateDeviceRequest request) {
+    // Implementation
 }
 ```
 
-### AI Integration Architecture
+#### Resource-Based Authorization
+```java
+@PreAuthorize("@deviceSecurityService.hasAccess(authentication, #deviceId)")
+public DeviceResponse getDevice(String deviceId) {
+    // Implementation
+}
+```
 
-Mingo AI integration follows a plugin-based architecture:
+## AI Integration Architecture
 
+### Mingo AI Assistant
+
+**Components:**
+- VoltAgent Core for agent orchestration
+- Anthropic SDK for Claude model access
+- Context management for conversations
+- Enterprise guardrails and policies
+
+**AI Data Flow:**
 ```mermaid
 flowchart LR
-    ChatUI[Chat Interface] --> ChatService[Chat Service]
-    ChatService --> AIRouter[AI Router]
-    AIRouter --> Claude[Anthropic Claude]
-    AIRouter --> OpenAI[OpenAI GPT]
-    AIRouter --> Local[Local Models]
-    
-    AIRouter --> ToolExecution[Tool Execution Layer]
-    ToolExecution --> DeviceAPI[Device Management API]
-    ToolExecution --> ScriptAPI[Script Execution API]
-    ToolExecution --> MonitoringAPI[Monitoring API]
+    User[User Query] --> Frontend[Frontend UI]
+    Frontend --> AIService[AI Service]
+    AIService --> Context[Context Manager]
+    Context --> Anthropic[Anthropic API]
+    Anthropic --> Response[AI Response]
+    Response --> Guardrails[Policy Enforcement]
+    Guardrails --> User
 ```
 
-## Deployment Architecture
+### AI Security and Governance
 
-### Container Architecture
+- **Data Privacy**: Sensitive data filtering
+- **Approval Workflows**: Administrative oversight for critical operations
+- **Audit Logging**: All AI interactions tracked
+- **Rate Limiting**: Usage controls and billing management
 
-```yaml
-# docker-compose.production.yml
-version: '3.8'
-services:
-  gateway:
-    image: openframe/gateway:latest
-    ports: ["443:8082"]
-    environment:
-      - SPRING_PROFILES_ACTIVE=production
-      - JWT_ISSUER_URI=https://auth.yourdomain.com
+## Performance and Scalability
+
+### Horizontal Scaling Strategy
+
+```mermaid
+flowchart TB
+    LB[Load Balancer] --> GW1[Gateway 1]
+    LB --> GW2[Gateway 2]
+    LB --> GWn[Gateway N]
     
-  api:
-    image: openframe/api:latest
-    environment:
-      - SPRING_PROFILES_ACTIVE=production
-      - MONGO_URI=mongodb://mongo-cluster:27017
-    depends_on: [mongodb, kafka]
+    GW1 --> API1[API Service 1]
+    GW1 --> API2[API Service 2]
+    GW2 --> API2
+    GW2 --> API3[API Service 3]
     
-  auth:
-    image: openframe/auth:latest
-    environment:
-      - SPRING_PROFILES_ACTIVE=production
-    depends_on: [mongodb]
+    API1 --> DB[(MongoDB Cluster)]
+    API2 --> DB
+    API3 --> DB
 ```
 
-### Kubernetes Deployment
+### Caching Strategies
 
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: openframe-api
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: openframe-api
-  template:
-    metadata:
-      labels:
-        app: openframe-api
-    spec:
-      containers:
-      - name: api
-        image: openframe/api:latest
-        env:
-        - name: SPRING_PROFILES_ACTIVE
-          value: "kubernetes"
-        - name: MONGO_URI
-          valueFrom:
-            secretKeyRef:
-              name: openframe-secrets
-              key: mongo-uri
+#### 1. Application-Level Caching
+```java
+@Cacheable(value = "devices", key = "#tenantId + ':' + #deviceId")
+public Device getDevice(String tenantId, String deviceId) {
+    return deviceRepository.findById(deviceId);
+}
 ```
 
-## Performance Considerations
-
-### Scalability Patterns
-
-**Horizontal Scaling:**
-- **Stateless services** for easy horizontal scaling
-- **Database read replicas** for read-heavy workloads
-- **Event sourcing** for eventually consistent data
-- **Caching layers** for frequently accessed data
-
-**Database Optimization:**
-- **Connection pooling** with HikariCP
-- **Query optimization** with proper indexing
-- **Data partitioning** by tenant and time
-- **Archive strategies** for historical data
-
-**Caching Strategy:**
-```text
-L1 Cache (Application)     # In-memory caffeine cache
-├── User sessions (5 min TTL)
-├── Configuration data (1 hour TTL)
-└── Frequently accessed entities
-
-L2 Cache (Redis Cluster)   # Distributed caching
-├── API responses (15 min TTL)
-├── Database query results (30 min TTL)
-├── Real-time dashboard data (1 min TTL)
-└── Cross-service shared data
+#### 2. Database Query Optimization
+```javascript
+// MongoDB indexes for multi-tenant queries
+db.devices.createIndex({ "tenantId": 1, "status": 1, "lastSeen": -1 })
+db.users.createIndex({ "tenantId": 1, "email": 1 }, { unique: true })
 ```
 
 ### Monitoring and Observability
 
 **Metrics Collection:**
-- **Application metrics** via Micrometer + Prometheus
-- **Infrastructure metrics** via Node Exporter
-- **Custom business metrics** via Spring Boot Actuator
-
-**Distributed Tracing:**
-- **Zipkin** for request tracing across services
-- **Correlation IDs** for request tracking
-- **Performance profiling** with async profilers
+- Spring Boot Actuator endpoints
+- Micrometer with Prometheus integration
+- Custom business metrics
+- Real-time performance dashboards
 
 **Logging Strategy:**
-```text
-Application Logs
-├── Structured JSON logging (ELK Stack)
-├── Correlation ID injection
-├── Tenant context in all log entries
-└── Security event logging
-
-Audit Logs
-├── Immutable audit trail (Cassandra)
-├── User action logging
-├── Data access logging
-└── Configuration change logging
-```
+- Structured JSON logging
+- Tenant-aware log correlation
+- Centralized log aggregation
+- Compliance audit trails
 
 ## Key Design Decisions
 
-### Technology Choices
+### 1. Microservices vs. Modular Monolith
+**Decision**: Microservices architecture
+**Rationale**: 
+- Independent scaling of components
+- Technology diversity (Java backend, Rust agents)
+- Team autonomy and deployment independence
+- Fault isolation
 
-| Decision | Chosen Technology | Alternatives Considered | Rationale |
-|----------|------------------|------------------------|-----------|
-| **Backend Framework** | Spring Boot 3.3 | Quarkus, Micronaut | Mature ecosystem, excellent tooling |
-| **Frontend Framework** | Next.js 16 + React 19 | Vue.js, Angular | Server-side rendering, React ecosystem |
-| **Database** | MongoDB | PostgreSQL, MySQL | Document flexibility, horizontal scaling |
-| **Event Streaming** | Apache Kafka | RabbitMQ, Apache Pulsar | High throughput, ecosystem maturity |
-| **Analytics** | Apache Pinot | ClickHouse, Apache Druid | Real-time OLAP, LinkedIn proven |
-| **Authentication** | OAuth2/OIDC | Custom JWT, Auth0 | Standards-based, multi-tenant support |
+### 2. Event-Driven Communication
+**Decision**: NATS for real-time, Kafka for durability
+**Rationale**:
+- Loose coupling between services
+- Horizontal scalability
+- Audit trail for compliance
+- Integration with external systems
 
-### Architectural Trade-offs
+### 3. Multi-Database Strategy
+**Decision**: MongoDB (operational), Cassandra (audit), Redis (cache)
+**Rationale**:
+- Optimal data models for each use case
+- Performance optimization
+- Compliance requirements
+- Caching and session management
 
-**Event-Driven vs Request-Response:**
-- ✅ **Chosen**: Event-driven for core workflows
-- ❌ **Trade-off**: Increased complexity, eventual consistency
-- **Rationale**: Better scalability and resilience for MSP operations
+### 4. OAuth2/OIDC for Authentication
+**Decision**: Custom authorization server with Spring Security
+**Rationale**:
+- Multi-tenant identity management
+- Standard protocol compatibility
+- Fine-grained access control
+- Integration with external identity providers
 
-**Multi-Tenant vs Single-Tenant:**
-- ✅ **Chosen**: Multi-tenant architecture
-- ❌ **Trade-off**: Increased security complexity
-- **Rationale**: Cost efficiency and simplified operations
+## Development Patterns and Best Practices
 
-**Microservices vs Monolith:**
-- ✅ **Chosen**: Microservices with domain boundaries
-- ❌ **Trade-off**: Network complexity, distributed system challenges
-- **Rationale**: Team scalability and technology flexibility
+### 1. Domain-Driven Design (DDD)
+- Bounded contexts for each service
+- Rich domain models
+- Repository pattern for data access
+- Domain events for inter-service communication
 
-## Next Steps
+### 2. CQRS Implementation
+```java
+// Command side
+@PostMapping("/devices")
+public ResponseEntity<DeviceResponse> createDevice(@RequestBody CreateDeviceCommand command) {
+    Device device = deviceCommandService.createDevice(command);
+    return ResponseEntity.ok(deviceMapper.toResponse(device));
+}
 
-To dive deeper into specific aspects of the architecture:
+// Query side
+@QueryMapping
+public DeviceConnection devices(@Argument DeviceFilterInput filter) {
+    return deviceQueryService.getDevices(filter);
+}
+```
 
-1. **[API Contracts](api-contracts.md)** - Detailed API specifications
-2. **[Security Architecture](../security/README.md)** - Security implementation details
-3. **[Data Layer Design](data-layer.md)** - Database and storage patterns
-4. **[Deployment Guide](../deployment/README.md)** - Production deployment strategies
+### 3. Event Sourcing Patterns
+```java
+@EventHandler
+public void on(DeviceCreatedEvent event) {
+    // Update read model
+    DeviceReadModel readModel = new DeviceReadModel(event);
+    readModelRepository.save(readModel);
+    
+    // Publish integration event
+    integrationEventPublisher.publish(new DeviceIntegrationEvent(event));
+}
+```
 
-## Architecture Evolution
-
-This architecture is designed to evolve with the platform's needs:
-
-- **Service boundaries** can be adjusted based on team organization
-- **Data storage** can be optimized based on access patterns
-- **Integration patterns** can be extended for new tool types
-- **Security models** can be enhanced for compliance requirements
-
-Join our [OpenMSP Slack community](https://join.slack.com/t/openmsp/shared_invite/zt-36bl7mx0h-3~U2nFH6nqHqoTPXMaHEHA) to discuss architecture decisions and contribute to the platform's evolution.
+This architecture overview provides the foundation for understanding OpenFrame's design and implementation. The next sections dive deeper into specific aspects like security, testing, and contributing guidelines.

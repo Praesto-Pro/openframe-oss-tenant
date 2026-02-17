@@ -1,946 +1,899 @@
-# Testing Guide
+# Testing Overview
 
-This comprehensive guide covers testing strategies, frameworks, and best practices for the OpenFrame platform. Testing is integrated into every aspect of the development lifecycle to ensure reliability, security, and performance.
+This guide covers OpenFrame's comprehensive testing strategy, including unit tests, integration tests, end-to-end tests, and testing best practices. Learn how to run tests, write new test cases, and maintain high code quality.
 
-## Testing Philosophy
+## Testing Strategy
 
-OpenFrame follows a **test-driven development (TDD)** approach with comprehensive coverage across all layers:
+OpenFrame employs a multi-layered testing approach to ensure reliability, security, and performance:
 
 ```mermaid
-flowchart TD
-    subgraph "Testing Pyramid"
-        E2E[End-to-End Tests<br/>Integration & User Flows]
-        Integration[Integration Tests<br/>Service & API Testing]
-        Component[Component Tests<br/>React Components]
-        Unit[Unit Tests<br/>Business Logic]
-    end
+pyramid
+    title Testing Pyramid
     
-    Unit --> Component
-    Component --> Integration  
-    Integration --> E2E
-    
-    subgraph "Test Types"
-        Functional[Functional Testing]
-        Security[Security Testing]
-        Performance[Performance Testing]
-        Contract[Contract Testing]
-    end
-    
-    E2E --> Functional
-    Integration --> Security
-    Integration --> Performance
-    Integration --> Contract
+    "E2E Tests" : 10
+    "Integration Tests" : 30  
+    "Unit Tests" : 60
 ```
+
+### Testing Layers
+
+| Test Type | Coverage | Tools | Purpose |
+|-----------|----------|--------|---------|
+| **Unit Tests** | 60% | JUnit 5, Mockito, Jest | Individual component logic |
+| **Integration Tests** | 30% | TestContainers, Spring Boot Test | Service interactions |
+| **End-to-End Tests** | 10% | Playwright, REST Assured | Complete user workflows |
 
 ## Test Structure and Organization
 
-### Backend Testing Structure
+### Backend Test Structure
 
 ```text
 src/test/java/
 ├── unit/                           # Unit tests
-│   ├── service/                   # Service layer tests
-│   ├── repository/                # Repository tests
-│   ├── mapper/                    # Mapping logic tests
-│   └── util/                      # Utility class tests
+│   ├── service/                    # Service layer tests
+│   ├── controller/                 # Controller tests
+│   ├── repository/                 # Repository tests
+│   └── util/                      # Utility tests
 ├── integration/                    # Integration tests
-│   ├── api/                      # REST API tests
-│   ├── graphql/                  # GraphQL tests
-│   ├── database/                 # Database integration
-│   └── security/                 # Security integration tests
-├── e2e/                           # End-to-end tests
-│   ├── scenarios/                # User workflow tests
-│   └── performance/              # Performance tests
-└── testcontainers/                # Container-based tests
-    ├── mongodb/                  # MongoDB test containers
-    ├── kafka/                    # Kafka test containers
-    └── redis/                    # Redis test containers
+│   ├── api/                       # API integration tests
+│   ├── database/                  # Database integration
+│   └── messaging/                 # Kafka/NATS integration
+└── e2e/                           # End-to-end tests
+    ├── user-flows/                # Complete user journeys
+    └── api-contracts/             # API contract tests
 ```
 
-### Frontend Testing Structure
+### Frontend Test Structure
 
 ```text
-src/
-├── __tests__/                     # Test files
-│   ├── components/               # Component tests
-│   ├── pages/                    # Page tests
-│   ├── hooks/                    # Custom hook tests
-│   ├── utils/                    # Utility function tests
-│   └── integration/              # Integration tests
-├── __mocks__/                     # Manual mocks
-│   ├── __mocks__/               # Module mocks
-│   └── fixtures/                 # Test data fixtures
-└── cypress/                       # E2E tests
-    ├── e2e/                     # End-to-end test specs
-    ├── fixtures/                 # Test data
-    └── support/                  # Support files
+src/__tests__/
+├── components/                     # Component tests
+├── hooks/                         # Custom hooks tests
+├── pages/                         # Page component tests
+├── services/                      # Service layer tests
+├── utils/                         # Utility function tests
+└── integration/                   # Integration tests
+    ├── api/                       # API integration
+    └── auth/                      # Authentication flows
 ```
 
-## Unit Testing
+## Running Tests
 
-### Backend Unit Tests (Java)
+### Backend Tests (Maven)
 
-**Service Layer Testing:**
+#### Unit Tests
+```bash
+# Run all unit tests
+mvn test
+
+# Run specific test class
+mvn test -Dtest=UserServiceTest
+
+# Run tests for specific module
+mvn test -pl openframe/services/openframe-api
+
+# Run tests with coverage
+mvn test jacoco:report
+
+# Skip tests during build
+mvn clean install -DskipTests
+```
+
+#### Integration Tests
+```bash
+# Run integration tests (requires Docker)
+mvn verify -Pintegration-tests
+
+# Run with TestContainers (isolated)
+mvn verify -Pcontainer-tests
+
+# Run specific integration test
+mvn verify -Dit.test=DeviceIntegrationTest
+```
+
+#### Test Profiles
+
+**application-test.yml:**
+```yaml
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  
+  kafka:
+    bootstrap-servers: ${spring.embedded.kafka.brokers}
+  
+  data:
+    mongodb:
+      host: localhost
+      port: 0  # Use random port with @DataMongoTest
+
+logging:
+  level:
+    org.springframework.test: DEBUG
+    org.testcontainers: INFO
+```
+
+### Frontend Tests (Jest/Vitest)
+
+```bash
+cd openframe/services/openframe-frontend
+
+# Run all tests
+npm test
+
+# Run in watch mode
+npm run test:watch
+
+# Run with coverage
+npm run test:coverage
+
+# Run specific test file
+npm test UserProfile.test.tsx
+
+# Run integration tests
+npm run test:integration
+```
+
+### End-to-End Tests
+
+```bash
+# Install dependencies
+npm install -g @playwright/test
+
+# Run e2e tests
+npm run test:e2e
+
+# Run with specific browser
+npm run test:e2e -- --project=chromium
+
+# Run in headed mode (visible browser)
+npm run test:e2e -- --headed
+```
+
+## Writing Unit Tests
+
+### Backend Unit Tests (JUnit 5 + Mockito)
+
+#### Service Layer Testing
 
 ```java
 @ExtendWith(MockitoExtension.class)
-class DeviceServiceTest {
+class UserServiceTest {
     
     @Mock
-    private DeviceRepository deviceRepository;
+    private UserRepository userRepository;
     
     @Mock
-    private OrganizationService organizationService;
+    private PasswordEncoder passwordEncoder;
     
     @Mock
-    private AuditService auditService;
+    private TenantContext tenantContext;
     
     @InjectMocks
-    private DeviceService deviceService;
+    private UserService userService;
+    
+    @BeforeEach
+    void setUp() {
+        when(tenantContext.getCurrentTenant()).thenReturn("tenant-123");
+    }
     
     @Test
-    @DisplayName("Should create device successfully")
-    void shouldCreateDeviceSuccessfully() {
+    @DisplayName("Should create user with encrypted password")
+    void shouldCreateUserWithEncryptedPassword() {
         // Given
-        String tenantId = "tenant-123";
-        String organizationId = "org-456";
-        CreateDeviceRequest request = CreateDeviceRequest.builder()
-            .deviceName("Test Device")
-            .deviceType(DeviceType.DESKTOP)
-            .organizationId(organizationId)
+        CreateUserRequest request = CreateUserRequest.builder()
+            .email("john.doe@example.com")
+            .firstName("John")
+            .lastName("Doe")
+            .password("SecurePass123!")
             .build();
             
-        Organization organization = Organization.builder()
-            .id(organizationId)
-            .tenantId(tenantId)
-            .name("Test Organization")
-            .build();
-            
-        Device savedDevice = Device.builder()
-            .id("device-789")
-            .tenantId(tenantId)
-            .organizationId(organizationId)
-            .deviceName("Test Device")
-            .deviceType(DeviceType.DESKTOP)
-            .status(DeviceStatus.PENDING)
-            .build();
+        String hashedPassword = "$2a$10$hashedPassword";
+        when(passwordEncoder.encode("SecurePass123!")).thenReturn(hashedPassword);
         
-        when(organizationService.findById(organizationId)).thenReturn(organization);
-        when(deviceRepository.save(any(Device.class))).thenReturn(savedDevice);
+        User savedUser = User.builder()
+            .id("user-123")
+            .email("john.doe@example.com")
+            .firstName("John")
+            .lastName("Doe")
+            .password(hashedPassword)
+            .tenantId("tenant-123")
+            .build();
+            
+        when(userRepository.save(any(User.class))).thenReturn(savedUser);
         
         // When
-        Device result = deviceService.createDevice(request);
+        UserResponse result = userService.createUser(request);
         
         // Then
         assertThat(result).isNotNull();
-        assertThat(result.getId()).isEqualTo("device-789");
-        assertThat(result.getDeviceName()).isEqualTo("Test Device");
-        assertThat(result.getStatus()).isEqualTo(DeviceStatus.PENDING);
+        assertThat(result.getEmail()).isEqualTo("john.doe@example.com");
+        assertThat(result.getFirstName()).isEqualTo("John");
+        assertThat(result.getLastName()).isEqualTo("Doe");
         
-        verify(deviceRepository).save(argThat(device -> 
-            device.getTenantId().equals(tenantId) &&
-            device.getOrganizationId().equals(organizationId) &&
-            device.getDeviceName().equals("Test Device")
+        verify(passwordEncoder).encode("SecurePass123!");
+        verify(userRepository).save(argThat(user -> 
+            user.getPassword().equals(hashedPassword) &&
+            user.getTenantId().equals("tenant-123")
         ));
-        
-        verify(auditService).logDeviceCreation(savedDevice);
     }
     
     @Test
-    @DisplayName("Should throw exception when organization not found")
-    void shouldThrowExceptionWhenOrganizationNotFound() {
+    @DisplayName("Should throw exception when user already exists")
+    void shouldThrowExceptionWhenUserAlreadyExists() {
         // Given
-        CreateDeviceRequest request = CreateDeviceRequest.builder()
-            .organizationId("non-existent-org")
+        CreateUserRequest request = CreateUserRequest.builder()
+            .email("existing@example.com")
             .build();
             
-        when(organizationService.findById("non-existent-org"))
-            .thenThrow(new OrganizationNotFoundException("non-existent-org"));
+        when(userRepository.existsByEmailAndTenantId("existing@example.com", "tenant-123"))
+            .thenReturn(true);
         
         // When & Then
-        assertThatThrownBy(() -> deviceService.createDevice(request))
-            .isInstanceOf(OrganizationNotFoundException.class)
-            .hasMessage("Organization not found: non-existent-org");
+        assertThatThrownBy(() -> userService.createUser(request))
+            .isInstanceOf(UserAlreadyExistsException.class)
+            .hasMessage("User with email 'existing@example.com' already exists");
             
-        verify(deviceRepository, never()).save(any(Device.class));
+        verify(userRepository, never()).save(any(User.class));
     }
 }
 ```
 
-**Repository Testing with TestContainers:**
+#### Controller Testing
 
 ```java
-@DataMongoTest
-@TestPropertySource(properties = {
-    "spring.mongodb.embedded.version=6.0.0"
-})
-class DeviceRepositoryTest {
+@WebMvcTest(UserController.class)
+@ActiveProfiles("test")
+class UserControllerTest {
     
     @Autowired
-    private TestEntityManager entityManager;
+    private MockMvc mockMvc;
     
-    @Autowired
-    private DeviceRepository deviceRepository;
+    @MockBean
+    private UserService userService;
     
-    private static final String TENANT_ID = "test-tenant";
-    private static final String ORG_ID = "test-org";
+    @MockBean
+    private JwtDecoder jwtDecoder;
     
     @Test
-    @DisplayName("Should find devices by organization and status")
-    void shouldFindDevicesByOrganizationAndStatus() {
+    @DisplayName("Should create user and return 201")
+    @WithMockUser(roles = "ADMIN")
+    void shouldCreateUserAndReturn201() throws Exception {
         // Given
-        Device onlineDevice = createTestDevice("device-1", DeviceStatus.ONLINE);
-        Device offlineDevice = createTestDevice("device-2", DeviceStatus.OFFLINE);
-        Device pendingDevice = createTestDevice("device-3", DeviceStatus.PENDING);
+        CreateUserRequest request = new CreateUserRequest();
+        request.setEmail("john.doe@example.com");
+        request.setFirstName("John");
+        request.setLastName("Doe");
         
-        entityManager.persist(onlineDevice);
-        entityManager.persist(offlineDevice);
-        entityManager.persist(pendingDevice);
-        entityManager.flush();
+        UserResponse response = UserResponse.builder()
+            .id("user-123")
+            .email("john.doe@example.com")
+            .firstName("John")
+            .lastName("Doe")
+            .build();
+            
+        when(userService.createUser(any(CreateUserRequest.class))).thenReturn(response);
         
-        // When
-        List<Device> onlineDevices = deviceRepository
-            .findByTenantIdAndOrganizationIdAndStatus(TENANT_ID, ORG_ID, DeviceStatus.ONLINE);
-        
-        // Then
-        assertThat(onlineDevices).hasSize(1);
-        assertThat(onlineDevices.get(0).getId()).isEqualTo("device-1");
-        assertThat(onlineDevices.get(0).getStatus()).isEqualTo(DeviceStatus.ONLINE);
+        // When & Then
+        mockMvc.perform(post("/api/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "email": "john.doe@example.com",
+                        "firstName": "John",
+                        "lastName": "Doe",
+                        "password": "SecurePass123!"
+                    }
+                    """))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.id").value("user-123"))
+            .andExpect(jsonPath("$.email").value("john.doe@example.com"))
+            .andExpect(jsonPath("$.firstName").value("John"))
+            .andExpect(jsonPath("$.lastName").value("Doe"));
     }
     
     @Test
-    @DisplayName("Should respect tenant isolation in queries")
-    void shouldRespectTenantIsolation() {
-        // Given
-        Device tenant1Device = Device.builder()
-            .id("device-tenant1")
-            .tenantId("tenant-1")
-            .organizationId(ORG_ID)
-            .deviceName("Tenant 1 Device")
-            .status(DeviceStatus.ONLINE)
-            .build();
-            
-        Device tenant2Device = Device.builder()
-            .id("device-tenant2")
-            .tenantId("tenant-2")
-            .organizationId(ORG_ID)
-            .deviceName("Tenant 2 Device")
-            .status(DeviceStatus.ONLINE)
-            .build();
-            
-        entityManager.persist(tenant1Device);
-        entityManager.persist(tenant2Device);
-        entityManager.flush();
-        
-        // When
-        List<Device> tenant1Devices = deviceRepository
-            .findByTenantIdAndOrganizationId("tenant-1", ORG_ID);
-        
-        // Then
-        assertThat(tenant1Devices).hasSize(1);
-        assertThat(tenant1Devices.get(0).getTenantId()).isEqualTo("tenant-1");
-        assertThat(tenant1Devices.get(0).getDeviceName()).isEqualTo("Tenant 1 Device");
-    }
-    
-    private Device createTestDevice(String deviceId, DeviceStatus status) {
-        return Device.builder()
-            .id(deviceId)
-            .tenantId(TENANT_ID)
-            .organizationId(ORG_ID)
-            .deviceName("Test Device " + deviceId)
-            .deviceType(DeviceType.DESKTOP)
-            .status(status)
-            .createdAt(Instant.now())
-            .build();
+    @DisplayName("Should return 400 for invalid request")
+    @WithMockUser(roles = "ADMIN")
+    void shouldReturn400ForInvalidRequest() throws Exception {
+        mockMvc.perform(post("/api/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                        "email": "invalid-email",
+                        "firstName": "",
+                        "lastName": "Doe"
+                    }
+                    """))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.errors").isArray())
+            .andExpect(jsonPath("$.errors[*]").value(hasItems(
+                containsString("Invalid email format"),
+                containsString("First name is required")
+            )));
     }
 }
 ```
 
-### Frontend Unit Tests (React/TypeScript)
+### Frontend Unit Tests (Jest/Vitest + React Testing Library)
 
-**Component Testing with React Testing Library:**
+#### Component Testing
 
 ```typescript
-// DeviceCard.test.tsx
+// UserProfile.test.tsx
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { DeviceCard } from '../DeviceCard';
-import { Device, DeviceStatus } from '@/types/device';
+import { vi } from 'vitest';
+import { UserProfile } from './UserProfile';
+import { AuthContext } from '@/contexts/AuthContext';
 
-const mockDevice: Device = {
-  id: 'device-123',
-  deviceName: 'Test Device',
-  deviceType: 'DESKTOP',
-  status: DeviceStatus.ONLINE,
-  organizationId: 'org-456',
-  lastSeen: new Date('2024-01-01T10:00:00Z'),
-  ipAddress: '192.168.1.100',
-  operatingSystem: 'Windows 11',
+const mockAuthContext = {
+  user: {
+    id: '1',
+    email: 'john.doe@example.com',
+    firstName: 'John',
+    lastName: 'Doe',
+    roles: ['USER'],
+  },
+  updateProfile: vi.fn(),
+  isLoading: false,
 };
 
-const renderWithQueryClient = (component: React.ReactElement) => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
+describe('UserProfile', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
-  
-  return render(
-    <QueryClientProvider client={queryClient}>
-      {component}
-    </QueryClientProvider>
-  );
-};
 
-describe('DeviceCard', () => {
-  test('should render device information correctly', () => {
-    renderWithQueryClient(<DeviceCard device={mockDevice} />);
-    
-    expect(screen.getByText('Test Device')).toBeInTheDocument();
-    expect(screen.getByText('DESKTOP')).toBeInTheDocument();
-    expect(screen.getByText('192.168.1.100')).toBeInTheDocument();
-    expect(screen.getByText('Windows 11')).toBeInTheDocument();
-  });
-  
-  test('should display online status with correct styling', () => {
-    renderWithQueryClient(<DeviceCard device={mockDevice} />);
-    
-    const statusBadge = screen.getByTestId('device-status');
-    expect(statusBadge).toHaveTextContent('ONLINE');
-    expect(statusBadge).toHaveClass('bg-green-100', 'text-green-800');
-  });
-  
-  test('should handle device action menu', async () => {
-    const user = userEvent.setup();
-    renderWithQueryClient(<DeviceCard device={mockDevice} />);
-    
-    const actionButton = screen.getByRole('button', { name: /device actions/i });
-    await user.click(actionButton);
-    
-    expect(screen.getByRole('menuitem', { name: /restart/i })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: /update/i })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: /remove/i })).toBeInTheDocument();
-  });
-  
-  test('should call onDeviceUpdate when restart action is clicked', async () => {
-    const onDeviceUpdate = jest.fn();
-    const user = userEvent.setup();
-    
-    renderWithQueryClient(
-      <DeviceCard device={mockDevice} onDeviceUpdate={onDeviceUpdate} />
+  it('should display user information', () => {
+    render(
+      <AuthContext.Provider value={mockAuthContext}>
+        <UserProfile />
+      </AuthContext.Provider>
     );
-    
-    const actionButton = screen.getByRole('button', { name: /device actions/i });
-    await user.click(actionButton);
-    
-    const restartButton = screen.getByRole('menuitem', { name: /restart/i });
-    await user.click(restartButton);
-    
+
+    expect(screen.getByText('John Doe')).toBeInTheDocument();
+    expect(screen.getByText('john.doe@example.com')).toBeInTheDocument();
+  });
+
+  it('should update profile on form submission', async () => {
+    render(
+      <AuthContext.Provider value={mockAuthContext}>
+        <UserProfile />
+      </AuthContext.Provider>
+    );
+
+    const editButton = screen.getByRole('button', { name: /edit profile/i });
+    fireEvent.click(editButton);
+
+    const firstNameInput = screen.getByLabelText(/first name/i);
+    fireEvent.change(firstNameInput, { target: { value: 'Jane' } });
+
+    const saveButton = screen.getByRole('button', { name: /save/i });
+    fireEvent.click(saveButton);
+
     await waitFor(() => {
-      expect(onDeviceUpdate).toHaveBeenCalledWith(mockDevice.id, 'restart');
+      expect(mockAuthContext.updateProfile).toHaveBeenCalledWith({
+        firstName: 'Jane',
+        lastName: 'Doe',
+      });
+    });
+  });
+
+  it('should show validation errors for invalid input', async () => {
+    render(
+      <AuthContext.Provider value={mockAuthContext}>
+        <UserProfile />
+      </AuthContext.Provider>
+    );
+
+    const editButton = screen.getByRole('button', { name: /edit profile/i });
+    fireEvent.click(editButton);
+
+    const firstNameInput = screen.getByLabelText(/first name/i);
+    fireEvent.change(firstNameInput, { target: { value: '' } });
+
+    const saveButton = screen.getByRole('button', { name: /save/i });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/first name is required/i)).toBeInTheDocument();
     });
   });
 });
 ```
 
-**Custom Hook Testing:**
+#### Hook Testing
 
 ```typescript
-// useDevices.test.ts
-import { renderHook, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useDevices } from '../useDevices';
-import { DeviceFilters } from '@/types/device';
-import { devicesApi } from '@/services/devicesApi';
+// useUserProfile.test.ts
+import { renderHook, act, waitFor } from '@testing-library/react';
+import { vi } from 'vitest';
+import { useUserProfile } from './useUserProfile';
+import * as apiClient from '@/lib/api-client';
 
-jest.mock('@/services/devicesApi');
-const mockDevicesApi = devicesApi as jest.Mocked<typeof devicesApi>;
+vi.mock('@/lib/api-client');
 
-const createWrapper = () => {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
-  
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  );
-};
+describe('useUserProfile', () => {
+  const mockApiClient = apiClient as any;
 
-describe('useDevices', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
-  
-  test('should fetch devices successfully', async () => {
-    const mockDevices = [
-      { id: '1', deviceName: 'Device 1', status: 'ONLINE' },
-      { id: '2', deviceName: 'Device 2', status: 'OFFLINE' },
-    ];
-    
-    mockDevicesApi.getDevices.mockResolvedValue({
-      devices: mockDevices,
-      totalCount: 2,
-      hasNextPage: false,
-    });
-    
-    const { result } = renderHook(
-      () => useDevices({ organizationId: 'org-123' }),
-      { wrapper: createWrapper() }
-    );
-    
+
+  it('should fetch user profile on mount', async () => {
+    const mockProfile = {
+      id: '1',
+      email: 'john.doe@example.com',
+      firstName: 'John',
+      lastName: 'Doe',
+    };
+
+    mockApiClient.getCurrentUser.mockResolvedValue(mockProfile);
+
+    const { result } = renderHook(() => useUserProfile());
+
+    expect(result.current.isLoading).toBe(true);
+
     await waitFor(() => {
-      expect(result.current.isSuccess).toBe(true);
+      expect(result.current.isLoading).toBe(false);
     });
-    
-    expect(result.current.devices).toEqual(mockDevices);
-    expect(result.current.totalCount).toBe(2);
-    expect(mockDevicesApi.getDevices).toHaveBeenCalledWith({
-      organizationId: 'org-123',
-      cursor: undefined,
-      limit: 20,
-      filters: undefined,
-    });
+
+    expect(result.current.profile).toEqual(mockProfile);
+    expect(mockApiClient.getCurrentUser).toHaveBeenCalledTimes(1);
   });
-  
-  test('should handle API errors gracefully', async () => {
-    const mockError = new Error('API Error');
-    mockDevicesApi.getDevices.mockRejectedValue(mockError);
-    
-    const { result } = renderHook(
-      () => useDevices({ organizationId: 'org-123' }),
-      { wrapper: createWrapper() }
-    );
-    
+
+  it('should update profile', async () => {
+    const initialProfile = {
+      id: '1',
+      email: 'john.doe@example.com',
+      firstName: 'John',
+      lastName: 'Doe',
+    };
+
+    const updatedProfile = {
+      ...initialProfile,
+      firstName: 'Jane',
+    };
+
+    mockApiClient.getCurrentUser.mockResolvedValue(initialProfile);
+    mockApiClient.updateProfile.mockResolvedValue(updatedProfile);
+
+    const { result } = renderHook(() => useUserProfile());
+
     await waitFor(() => {
-      expect(result.current.isError).toBe(true);
+      expect(result.current.isLoading).toBe(false);
     });
-    
-    expect(result.current.error).toBe(mockError);
+
+    await act(async () => {
+      await result.current.updateProfile({ firstName: 'Jane' });
+    });
+
+    expect(result.current.profile?.firstName).toBe('Jane');
+    expect(mockApiClient.updateProfile).toHaveBeenCalledWith({ firstName: 'Jane' });
   });
 });
 ```
 
 ## Integration Testing
 
-### API Integration Tests
+### Database Integration Tests
+
+```java
+@DataMongoTest
+@ActiveProfiles("test")
+class UserRepositoryIntegrationTest {
+    
+    @Autowired
+    private TestEntityManager entityManager;
+    
+    @Autowired
+    private UserRepository userRepository;
+    
+    @Test
+    @DisplayName("Should find users by organization and role")
+    void shouldFindUsersByOrganizationAndRole() {
+        // Given
+        String tenantId = "tenant-123";
+        String organizationId = "org-456";
+        
+        User admin = User.builder()
+            .email("admin@example.com")
+            .tenantId(tenantId)
+            .organizationId(organizationId)
+            .roles(Set.of("ADMIN"))
+            .build();
+            
+        User user = User.builder()
+            .email("user@example.com")
+            .tenantId(tenantId)
+            .organizationId(organizationId)
+            .roles(Set.of("USER"))
+            .build();
+            
+        User otherTenant = User.builder()
+            .email("other@example.com")
+            .tenantId("other-tenant")
+            .organizationId(organizationId)
+            .roles(Set.of("ADMIN"))
+            .build();
+            
+        userRepository.saveAll(List.of(admin, user, otherTenant));
+        
+        // When
+        List<User> admins = userRepository.findByTenantIdAndOrganizationIdAndRolesContaining(
+            tenantId, organizationId, "ADMIN");
+        
+        // Then
+        assertThat(admins).hasSize(1);
+        assertThat(admins.get(0).getEmail()).isEqualTo("admin@example.com");
+    }
+}
+```
+
+### API Integration Tests with TestContainers
 
 ```java
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@TestPropertySource(properties = {
-    "spring.datasource.url=jdbc:h2:mem:testdb",
-    "spring.profiles.active=test"
-})
-class DeviceControllerIntegrationTest {
+@TestMethodOrder(OrderAnnotation.class)
+@Testcontainers
+class UserApiIntegrationTest {
+    
+    @Container
+    static MongoDBContainer mongodb = new MongoDBContainer("mongo:5.0")
+            .withReuse(true);
+    
+    @Container
+    static KafkaContainer kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.0.1"))
+            .withReuse(true);
+    
+    @Container
+    static RedisContainer redis = new RedisContainer("redis:7.0-alpine")
+            .withReuse(true);
     
     @Autowired
     private TestRestTemplate restTemplate;
     
     @Autowired
-    private DeviceRepository deviceRepository;
+    private UserRepository userRepository;
     
-    @Autowired
-    private JwtService jwtService;
-    
-    private String authToken;
-    private String tenantId = "test-tenant";
-    private String organizationId = "test-org";
-    
-    @BeforeEach
-    void setUp() {
-        // Generate test JWT token
-        authToken = jwtService.generateToken(
-            User.builder()
-                .id("user-123")
-                .email("test@example.com")
-                .tenantId(tenantId)
-                .organizationId(organizationId)
-                .roles(Set.of(Role.ORGANIZATION_ADMIN))
-                .build()
-        );
+    @DynamicPropertySource
+    static void configureProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.data.mongodb.uri", mongodb::getReplicaSetUrl);
+        registry.add("spring.kafka.bootstrap-servers", kafka::getBootstrapServers);
+        registry.add("spring.redis.host", redis::getHost);
+        registry.add("spring.redis.port", redis::getFirstMappedPort);
     }
     
     @Test
-    @DisplayName("Should create device via REST API")
-    void shouldCreateDeviceViaRestApi() {
+    @Order(1)
+    @DisplayName("Should create user via API")
+    void shouldCreateUserViaApi() {
         // Given
-        CreateDeviceRequest request = CreateDeviceRequest.builder()
-            .deviceName("Integration Test Device")
-            .deviceType(DeviceType.LAPTOP)
-            .organizationId(organizationId)
-            .ipAddress("192.168.1.200")
-            .build();
-        
+        String token = generateAdminToken();
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(authToken);
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(token);
         
-        HttpEntity<CreateDeviceRequest> entity = new HttpEntity<>(request, headers);
+        CreateUserRequest request = CreateUserRequest.builder()
+            .email("integration@example.com")
+            .firstName("Integration")
+            .lastName("Test")
+            .password("SecurePass123!")
+            .build();
+            
+        HttpEntity<CreateUserRequest> entity = new HttpEntity<>(request, headers);
         
         // When
-        ResponseEntity<DeviceResponse> response = restTemplate.postForEntity(
-            "/api/devices",
-            entity,
-            DeviceResponse.class
-        );
+        ResponseEntity<UserResponse> response = restTemplate.postForEntity(
+            "/api/users", entity, UserResponse.class);
         
         // Then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().getDeviceName()).isEqualTo("Integration Test Device");
-        assertThat(response.getBody().getTenantId()).isEqualTo(tenantId);
+        assertThat(response.getBody().getEmail()).isEqualTo("integration@example.com");
         
-        // Verify database persistence
-        Optional<Device> savedDevice = deviceRepository.findById(response.getBody().getId());
-        assertThat(savedDevice).isPresent();
-        assertThat(savedDevice.get().getDeviceName()).isEqualTo("Integration Test Device");
+        // Verify in database
+        Optional<User> savedUser = userRepository.findByEmail("integration@example.com");
+        assertThat(savedUser).isPresent();
+        assertThat(savedUser.get().getFirstName()).isEqualTo("Integration");
     }
     
     @Test
-    @DisplayName("Should return 401 for unauthenticated requests")
-    void shouldReturn401ForUnauthenticatedRequests() {
+    @Order(2)
+    @DisplayName("Should retrieve user by ID")
+    void shouldRetrieveUserById() {
         // Given
-        CreateDeviceRequest request = CreateDeviceRequest.builder()
-            .deviceName("Unauthorized Device")
-            .build();
-        
-        // When
-        ResponseEntity<String> response = restTemplate.postForEntity(
-            "/api/devices",
-            request,
-            String.class
-        );
-        
-        // Then
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-    }
-    
-    @Test
-    @DisplayName("Should prevent cross-tenant access")
-    void shouldPreventCrossTenantAccess() {
-        // Given - Create device for different tenant
-        Device otherTenantDevice = Device.builder()
-            .id("other-device")
-            .tenantId("other-tenant")
-            .organizationId("other-org")
-            .deviceName("Other Tenant Device")
-            .build();
-        deviceRepository.save(otherTenantDevice);
-        
+        String token = generateUserToken();
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(authToken);
+        headers.setBearerAuth(token);
         
-        HttpEntity<?> entity = new HttpEntity<>(headers);
+        User existingUser = userRepository.findByEmail("integration@example.com")
+            .orElseThrow();
+            
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
         
         // When
-        ResponseEntity<String> response = restTemplate.exchange(
-            "/api/devices/other-device",
-            HttpMethod.GET,
-            entity,
-            String.class
-        );
+        ResponseEntity<UserResponse> response = restTemplate.exchange(
+            "/api/users/" + existingUser.getId(), 
+            HttpMethod.GET, 
+            entity, 
+            UserResponse.class);
         
         // Then
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().getId()).isEqualTo(existingUser.getId());
     }
 }
 ```
 
-### GraphQL Integration Tests
+### Frontend API Integration Tests
 
-```java
-@SpringBootTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@TestPropertySource(properties = {
-    "spring.profiles.active=test"
-})
-class DeviceGraphQLIntegrationTest {
-    
-    @Autowired
-    private DgsQueryExecutor queryExecutor;
-    
-    @MockBean
-    private DeviceService deviceService;
-    
-    @Test
-    @DisplayName("Should execute devices query successfully")
-    void shouldExecuteDevicesQuerySuccessfully() {
-        // Given
-        List<Device> mockDevices = Arrays.asList(
-            Device.builder().id("1").deviceName("Device 1").build(),
-            Device.builder().id("2").deviceName("Device 2").build()
-        );
-        
-        DeviceConnection mockConnection = DeviceConnection.builder()
-            .devices(mockDevices)
-            .totalCount(2)
-            .hasNextPage(false)
-            .build();
-        
-        when(deviceService.getDevices(any(DeviceFilters.class), any(PaginationCriteria.class)))
-            .thenReturn(mockConnection);
-        
-        // When
-        ExecutionResult result = queryExecutor.execute("""
-            query GetDevices($organizationId: ID!, $first: Int) {
-                devices(organizationId: $organizationId, first: $first) {
-                    devices {
-                        id
-                        deviceName
-                    }
-                    totalCount
-                    hasNextPage
-                }
-            }
-        """, Map.of("organizationId", "org-123", "first", 10));
-        
-        // Then
-        assertThat(result.getErrors()).isEmpty();
-        
-        Map<String, Object> data = result.getData();
-        Map<String, Object> devicesData = (Map<String, Object>) data.get("devices");
-        
-        assertThat(devicesData.get("totalCount")).isEqualTo(2);
-        assertThat(devicesData.get("hasNextPage")).isEqualTo(false);
-        
-        List<Map<String, Object>> devices = (List<Map<String, Object>>) devicesData.get("devices");
-        assertThat(devices).hasSize(2);
-        assertThat(devices.get(0).get("deviceName")).isEqualTo("Device 1");
-        assertThat(devices.get(1).get("deviceName")).isEqualTo("Device 2");
-    }
-}
+```typescript
+// api-client.integration.test.ts
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { apiClient } from '@/lib/api-client';
+import { setupTestServer } from '@/test/utils/test-server';
+
+describe('API Client Integration', () => {
+  let server: any;
+
+  beforeAll(async () => {
+    server = await setupTestServer();
+  });
+
+  afterAll(async () => {
+    await server.close();
+  });
+
+  it('should authenticate and fetch user profile', async () => {
+    // Given
+    const credentials = {
+      email: 'test@example.com',
+      password: 'password123',
+    };
+
+    // When
+    const authResponse = await apiClient.login(credentials);
+    expect(authResponse.token).toBeDefined();
+
+    // Set token for subsequent requests
+    apiClient.setAuthToken(authResponse.token);
+
+    // Then
+    const profile = await apiClient.getCurrentUser();
+    expect(profile.email).toBe('test@example.com');
+  });
+
+  it('should handle API errors gracefully', async () => {
+    // Given
+    apiClient.setAuthToken('invalid-token');
+
+    // When & Then
+    await expect(apiClient.getCurrentUser()).rejects.toThrow(/unauthorized/i);
+  });
+});
 ```
 
 ## End-to-End Testing
 
-### Cypress E2E Tests
+### Playwright E2E Tests
 
 ```typescript
-// cypress/e2e/device-management.cy.ts
-describe('Device Management', () => {
-  beforeEach(() => {
-    // Login before each test
-    cy.login('admin@example.com', 'admin123');
+// e2e/user-management.spec.ts
+import { test, expect } from '@playwright/test';
+
+test.describe('User Management', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/auth/login');
     
-    // Intercept API calls
-    cy.intercept('GET', '/api/devices*', {
-      fixture: 'devices.json'
-    }).as('getDevices');
+    // Login as admin
+    await page.fill('[data-testid="email-input"]', 'admin@test.com');
+    await page.fill('[data-testid="password-input"]', 'admin123');
+    await page.click('[data-testid="login-button"]');
     
-    cy.intercept('POST', '/api/devices', {
-      statusCode: 201,
-      fixture: 'device-created.json'
-    }).as('createDevice');
+    // Wait for redirect to dashboard
+    await expect(page).toHaveURL('/dashboard');
   });
-  
-  it('should display devices list', () => {
-    cy.visit('/devices');
+
+  test('should create new user', async ({ page }) => {
+    // Navigate to users page
+    await page.click('[data-testid="users-nav-link"]');
+    await expect(page).toHaveURL('/settings');
     
-    cy.wait('@getDevices');
+    // Click add user button
+    await page.click('[data-testid="add-user-button"]');
     
-    cy.get('[data-testid="devices-table"]').should('be.visible');
-    cy.get('[data-testid="device-row"]').should('have.length.at.least', 1);
-    
-    // Verify device information is displayed
-    cy.get('[data-testid="device-row"]').first().within(() => {
-      cy.get('[data-testid="device-name"]').should('contain', 'Test Device 1');
-      cy.get('[data-testid="device-status"]').should('contain', 'ONLINE');
-      cy.get('[data-testid="device-ip"]').should('contain', '192.168.1.100');
-    });
-  });
-  
-  it('should create a new device', () => {
-    cy.visit('/devices');
-    
-    // Click add device button
-    cy.get('[data-testid="add-device-button"]').click();
-    
-    // Fill device form
-    cy.get('[data-testid="device-name-input"]').type('New Test Device');
-    cy.get('[data-testid="device-type-select"]').select('DESKTOP');
-    cy.get('[data-testid="organization-select"]').select('Test Organization');
-    cy.get('[data-testid="ip-address-input"]').type('192.168.1.201');
+    // Fill user form
+    await page.fill('[data-testid="user-email-input"]', 'newuser@test.com');
+    await page.fill('[data-testid="user-firstname-input"]', 'New');
+    await page.fill('[data-testid="user-lastname-input"]', 'User');
+    await page.selectOption('[data-testid="user-role-select"]', 'USER');
     
     // Submit form
-    cy.get('[data-testid="create-device-button"]').click();
+    await page.click('[data-testid="create-user-button"]');
     
-    cy.wait('@createDevice');
-    
-    // Verify success message
-    cy.get('[data-testid="success-toast"]')
-      .should('be.visible')
-      .and('contain', 'Device created successfully');
-    
-    // Verify redirect to devices list
-    cy.url().should('include', '/devices');
+    // Verify success
+    await expect(page.locator('[data-testid="success-message"]')).toBeVisible();
+    await expect(page.locator('text=newuser@test.com')).toBeVisible();
   });
-  
-  it('should handle device actions', () => {
-    cy.visit('/devices');
-    cy.wait('@getDevices');
+
+  test('should edit existing user', async ({ page }) => {
+    // Navigate to users and find user
+    await page.click('[data-testid="users-nav-link"]');
     
-    // Open device actions menu
-    cy.get('[data-testid="device-row"]').first().within(() => {
-      cy.get('[data-testid="device-actions-button"]').click();
+    const userRow = page.locator('[data-testid="user-row"]').filter({ 
+      hasText: 'newuser@test.com' 
     });
     
-    // Verify menu options
-    cy.get('[data-testid="device-actions-menu"]').should('be.visible');
-    cy.get('[data-testid="restart-device-action"]').should('be.visible');
-    cy.get('[data-testid="update-device-action"]').should('be.visible');
-    cy.get('[data-testid="remove-device-action"]').should('be.visible');
+    // Click edit button
+    await userRow.locator('[data-testid="edit-user-button"]').click();
     
-    // Click restart action
-    cy.intercept('POST', '/api/devices/*/restart', {
-      statusCode: 200,
-      body: { success: true }
-    }).as('restartDevice');
+    // Update user details
+    await page.fill('[data-testid="user-firstname-input"]', 'Updated');
     
-    cy.get('[data-testid="restart-device-action"]').click();
+    // Save changes
+    await page.click('[data-testid="save-user-button"]');
     
-    // Confirm restart in modal
-    cy.get('[data-testid="confirm-restart-button"]').click();
-    
-    cy.wait('@restartDevice');
-    
-    // Verify success message
-    cy.get('[data-testid="success-toast"]')
-      .should('be.visible')
-      .and('contain', 'Device restart initiated');
+    // Verify update
+    await expect(page.locator('text=Updated User')).toBeVisible();
   });
-  
-  it('should filter devices by status', () => {
-    cy.visit('/devices');
-    cy.wait('@getDevices');
+
+  test('should delete user', async ({ page }) => {
+    // Navigate and find user
+    await page.click('[data-testid="users-nav-link"]');
     
-    // Apply status filter
-    cy.get('[data-testid="status-filter"]').select('OFFLINE');
-    
-    cy.intercept('GET', '/api/devices*status=OFFLINE*', {
-      fixture: 'devices-offline.json'
-    }).as('getOfflineDevices');
-    
-    cy.wait('@getOfflineDevices');
-    
-    // Verify filtered results
-    cy.get('[data-testid="device-row"]').each(($row) => {
-      cy.wrap($row).find('[data-testid="device-status"]')
-        .should('contain', 'OFFLINE');
+    const userRow = page.locator('[data-testid="user-row"]').filter({ 
+      hasText: 'Updated User' 
     });
+    
+    // Click delete button
+    await userRow.locator('[data-testid="delete-user-button"]').click();
+    
+    // Confirm deletion
+    await page.click('[data-testid="confirm-delete-button"]');
+    
+    // Verify user is removed
+    await expect(page.locator('text=Updated User')).not.toBeVisible();
   });
 });
 ```
 
-### Cypress Custom Commands
+## Test Data Management
 
-```typescript
-// cypress/support/commands.ts
-declare global {
-  namespace Cypress {
-    interface Chainable {
-      login(email: string, password: string): Chainable<void>;
-      createDevice(deviceData: any): Chainable<void>;
-      interceptDevicesAPI(): Chainable<void>;
+### Test Data Builders
+
+```java
+public class UserTestDataBuilder {
+    
+    private String id = "user-" + UUID.randomUUID();
+    private String email = "test@example.com";
+    private String firstName = "Test";
+    private String lastName = "User";
+    private String tenantId = "tenant-123";
+    private Set<String> roles = Set.of("USER");
+    private boolean active = true;
+    
+    public static UserTestDataBuilder aUser() {
+        return new UserTestDataBuilder();
     }
-  }
-}
-
-Cypress.Commands.add('login', (email: string, password: string) => {
-  cy.session([email, password], () => {
-    cy.visit('/auth/login');
     
-    cy.get('[data-testid="email-input"]').type(email);
-    cy.get('[data-testid="password-input"]').type(password);
-    cy.get('[data-testid="login-button"]').click();
+    public UserTestDataBuilder withEmail(String email) {
+        this.email = email;
+        return this;
+    }
     
-    // Wait for successful login
-    cy.url().should('not.include', '/auth/login');
-    cy.window().its('localStorage.access_token').should('exist');
-  });
-});
-
-Cypress.Commands.add('createDevice', (deviceData) => {
-  cy.request({
-    method: 'POST',
-    url: '/api/devices',
-    headers: {
-      'Authorization': `Bearer ${window.localStorage.getItem('access_token')}`
-    },
-    body: deviceData
-  });
-});
-
-Cypress.Commands.add('interceptDevicesAPI', () => {
-  cy.intercept('GET', '/api/devices*', { fixture: 'devices.json' }).as('getDevices');
-  cy.intercept('POST', '/api/devices', { fixture: 'device-created.json' }).as('createDevice');
-  cy.intercept('PUT', '/api/devices/*', { fixture: 'device-updated.json' }).as('updateDevice');
-  cy.intercept('DELETE', '/api/devices/*', { statusCode: 204 }).as('deleteDevice');
-});
-```
-
-## Performance Testing
-
-### Load Testing with K6
-
-```javascript
-// k6/load-test.js
-import http from 'k6/http';
-import { check, sleep } from 'k6';
-import { Rate } from 'k6/metrics';
-
-const errorRate = new Rate('errors');
-
-export const options = {
-  stages: [
-    { duration: '2m', target: 100 },   // Ramp up to 100 users
-    { duration: '5m', target: 100 },   // Stay at 100 users
-    { duration: '2m', target: 200 },   // Ramp up to 200 users
-    { duration: '5m', target: 200 },   // Stay at 200 users
-    { duration: '2m', target: 0 },     // Ramp down to 0 users
-  ],
-  thresholds: {
-    http_req_duration: ['p(95)<500'],  // 95% of requests under 500ms
-    http_req_failed: ['rate<0.1'],     // Error rate under 10%
-    errors: ['rate<0.1'],              // Custom error rate under 10%
-  },
-};
-
-const BASE_URL = 'https://localhost:8080';
-const API_TOKEN = 'your-test-api-token';
-
-export function setup() {
-  // Login and get access token
-  const loginResponse = http.post(`${BASE_URL}/auth/login`, {
-    email: 'test@example.com',
-    password: 'testpassword123'
-  });
-  
-  const accessToken = JSON.parse(loginResponse.body).accessToken;
-  return { accessToken };
+    public UserTestDataBuilder withRoles(String... roles) {
+        this.roles = Set.of(roles);
+        return this;
+    }
+    
+    public UserTestDataBuilder withTenant(String tenantId) {
+        this.tenantId = tenantId;
+        return this;
+    }
+    
+    public UserTestDataBuilder inactive() {
+        this.active = false;
+        return this;
+    }
+    
+    public User build() {
+        return User.builder()
+            .id(id)
+            .email(email)
+            .firstName(firstName)
+            .lastName(lastName)
+            .tenantId(tenantId)
+            .roles(roles)
+            .active(active)
+            .createdAt(LocalDateTime.now())
+            .build();
+    }
 }
 
-export default function (data) {
-  const headers = {
-    'Authorization': `Bearer ${data.accessToken}`,
-    'Content-Type': 'application/json',
-  };
-  
-  // Test device listing endpoint
-  const devicesResponse = http.get(`${BASE_URL}/api/devices`, { headers });
-  
-  check(devicesResponse, {
-    'devices API status is 200': (r) => r.status === 200,
-    'devices API response time < 500ms': (r) => r.timings.duration < 500,
-    'devices API returns valid JSON': (r) => {
-      try {
-        JSON.parse(r.body);
-        return true;
-      } catch (e) {
-        return false;
-      }
-    },
-  }) || errorRate.add(1);
-  
-  // Test device creation endpoint
-  const createDevicePayload = {
-    deviceName: `Load Test Device ${Math.random()}`,
-    deviceType: 'DESKTOP',
-    organizationId: 'org-123',
-    ipAddress: `192.168.1.${Math.floor(Math.random() * 254) + 1}`,
-  };
-  
-  const createResponse = http.post(
-    `${BASE_URL}/api/devices`,
-    JSON.stringify(createDevicePayload),
-    { headers }
-  );
-  
-  check(createResponse, {
-    'create device status is 201': (r) => r.status === 201,
-    'create device response time < 1000ms': (r) => r.timings.duration < 1000,
-  }) || errorRate.add(1);
-  
-  sleep(1); // Wait 1 second between iterations
-}
-
-export function teardown(data) {
-  // Cleanup test data if needed
+// Usage in tests
+@Test
+void shouldFindActiveAdmins() {
+    // Given
+    User activeAdmin = aUser()
+        .withEmail("admin@test.com")
+        .withRoles("ADMIN")
+        .build();
+        
+    User inactiveAdmin = aUser()
+        .withEmail("inactive@test.com")
+        .withRoles("ADMIN")
+        .inactive()
+        .build();
+        
+    userRepository.saveAll(List.of(activeAdmin, inactiveAdmin));
+    
+    // When
+    List<User> activeAdmins = userRepository.findActiveUsersByRole("ADMIN");
+    
+    // Then
+    assertThat(activeAdmins).hasSize(1);
+    assertThat(activeAdmins.get(0).getEmail()).isEqualTo("admin@test.com");
 }
 ```
 
-### JMeter Performance Tests
+### Database Seeding for Tests
 
-```xml
-<!-- devices-performance-test.jmx -->
-<?xml version="1.0" encoding="UTF-8"?>
-<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.4.1">
-  <hashTree>
-    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="OpenFrame API Performance Test">
-      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
-      <elementProp name="TestPlan.arguments" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
-        <collectionProp name="Arguments.arguments"/>
-      </elementProp>
-      <stringProp name="TestPlan.user_define_classpath"></stringProp>
-    </TestPlan>
-    <hashTree>
-      <!-- Thread Group for API Load Testing -->
-      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="API Load Test">
-        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlGui" testclass="LoopController" testname="Loop Controller">
-          <boolProp name="LoopController.continue_forever">false</boolProp>
-          <stringProp name="LoopController.loops">100</stringProp>
-        </elementProp>
-        <stringProp name="ThreadGroup.num_threads">50</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">60</stringProp>
-      </ThreadGroup>
-      <hashTree>
-        <!-- HTTP Request for Device API -->
-        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Devices API">
-          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="User Defined Variables">
-            <collectionProp name="Arguments.arguments"/>
-          </elementProp>
-          <stringProp name="HTTPSampler.domain">localhost</stringProp>
-          <stringProp name="HTTPSampler.port">8080</stringProp>
-          <stringProp name="HTTPSampler.protocol">https</stringProp>
-          <stringProp name="HTTPSampler.contentEncoding"></stringProp>
-          <stringProp name="HTTPSampler.path">/api/devices</stringProp>
-          <stringProp name="HTTPSampler.method">GET</stringProp>
-          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
-          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
-          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
-        </HTTPSamplerProxy>
-      </hashTree>
-    </hashTree>
-  </hashTree>
-</jmeterTestPlan>
+```java
+@Component
+@Profile("test")
+public class TestDataSeeder {
+    
+    private final UserRepository userRepository;
+    private final OrganizationRepository organizationRepository;
+    
+    @EventListener
+    public void onApplicationReady(ApplicationReadyEvent event) {
+        seedTestData();
+    }
+    
+    private void seedTestData() {
+        Organization testOrg = Organization.builder()
+            .id("test-org-123")
+            .name("Test Organization")
+            .slug("test-org")
+            .tenantId("tenant-123")
+            .build();
+            
+        organizationRepository.save(testOrg);
+        
+        User adminUser = User.builder()
+            .id("admin-123")
+            .email("admin@test.com")
+            .firstName("Admin")
+            .lastName("User")
+            .password("$2a$10$hashedpassword")
+            .tenantId("tenant-123")
+            .organizationId("test-org-123")
+            .roles(Set.of("ADMIN"))
+            .active(true)
+            .build();
+            
+        userRepository.save(adminUser);
+    }
+}
 ```
 
-## Test Coverage and Quality
+## Coverage Requirements
 
-### Coverage Requirements
+### Coverage Targets
 
-**Backend Coverage Targets:**
-- **Unit Tests**: Minimum 80% line coverage, 70% branch coverage
-- **Integration Tests**: Critical business paths 100% covered
-- **Service Layer**: 90% method coverage
-- **Repository Layer**: 85% method coverage
-
-**Frontend Coverage Targets:**
-- **Component Tests**: 80% line coverage
-- **Hook Tests**: 90% line coverage
-- **Utility Functions**: 95% line coverage
-- **Critical User Flows**: 100% covered
+| Component | Minimum Coverage | Target Coverage |
+|-----------|-----------------|----------------|
+| Service Layer | 85% | 95% |
+| Controller Layer | 80% | 90% |
+| Repository Layer | 75% | 85% |
+| Utility Classes | 90% | 95% |
+| Overall Project | 80% | 90% |
 
 ### Coverage Configuration
 
-**Backend (JaCoCo):**
-
+**Maven (JaCoCo):**
 ```xml
 <plugin>
     <groupId>org.jacoco</groupId>
@@ -967,17 +920,12 @@ export function teardown(data) {
             <configuration>
                 <rules>
                     <rule>
-                        <element>BUNDLE</element>
+                        <element>CLASS</element>
                         <limits>
                             <limit>
                                 <counter>LINE</counter>
                                 <value>COVEREDRATIO</value>
                                 <minimum>0.80</minimum>
-                            </limit>
-                            <limit>
-                                <counter>BRANCH</counter>
-                                <value>COVEREDRATIO</value>
-                                <minimum>0.70</minimum>
                             </limit>
                         </limits>
                     </rule>
@@ -988,357 +936,45 @@ export function teardown(data) {
 </plugin>
 ```
 
-**Frontend (Jest Coverage):**
-
-```javascript
-// jest.config.js
-module.exports = {
-  collectCoverageFrom: [
-    'src/**/*.{ts,tsx}',
-    '!src/**/*.d.ts',
-    '!src/**/*.stories.{ts,tsx}',
-    '!src/**/index.ts',
-  ],
-  coverageThreshold: {
-    global: {
-      lines: 80,
-      functions: 80,
-      branches: 70,
-      statements: 80,
-    },
-    './src/components/': {
-      lines: 80,
-      functions: 80,
-      branches: 70,
-      statements: 80,
-    },
-    './src/hooks/': {
-      lines: 90,
-      functions: 90,
-      branches: 80,
-      statements: 90,
+**Frontend (Vitest):**
+```typescript
+// vitest.config.ts
+export default defineConfig({
+  test: {
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        branches: 75,
+        statements: 80,
+      },
+      exclude: [
+        'node_modules/',
+        'src/test/',
+        '**/*.d.ts',
+        '**/*.config.*',
+      ],
     },
   },
-  coverageReporters: ['text', 'lcov', 'html'],
-};
+});
 ```
 
-## Test Data Management
-
-### Test Fixtures
-
-**Backend Test Data:**
-
-```java
-@Component
-public class TestDataBuilder {
-    
-    public static Device createTestDevice() {
-        return Device.builder()
-            .id(UUID.randomUUID().toString())
-            .tenantId("test-tenant")
-            .organizationId("test-org")
-            .deviceName("Test Device")
-            .deviceType(DeviceType.DESKTOP)
-            .status(DeviceStatus.ONLINE)
-            .ipAddress("192.168.1.100")
-            .operatingSystem("Windows 11")
-            .createdAt(Instant.now())
-            .build();
-    }
-    
-    public static User createTestUser() {
-        return User.builder()
-            .id(UUID.randomUUID().toString())
-            .tenantId("test-tenant")
-            .email("test@example.com")
-            .firstName("Test")
-            .lastName("User")
-            .roles(Set.of(Role.ORGANIZATION_ADMIN))
-            .status(UserStatus.ACTIVE)
-            .createdAt(Instant.now())
-            .build();
-    }
-}
-```
-
-**Frontend Test Data:**
-
-```typescript
-// fixtures/devices.json
-{
-  "devices": [
-    {
-      "id": "device-1",
-      "deviceName": "Test Device 1",
-      "deviceType": "DESKTOP",
-      "status": "ONLINE",
-      "organizationId": "org-123",
-      "ipAddress": "192.168.1.100",
-      "operatingSystem": "Windows 11",
-      "lastSeen": "2024-01-01T10:00:00Z"
-    },
-    {
-      "id": "device-2", 
-      "deviceName": "Test Device 2",
-      "deviceType": "LAPTOP",
-      "status": "OFFLINE",
-      "organizationId": "org-123",
-      "ipAddress": "192.168.1.101",
-      "operatingSystem": "macOS 13.0",
-      "lastSeen": "2024-01-01T09:30:00Z"
-    }
-  ],
-  "totalCount": 2,
-  "hasNextPage": false
-}
-```
-
-## Continuous Integration Testing
-
-### GitHub Actions Workflow
-
-```yaml
-# .github/workflows/test.yml
-name: Test Suite
-
-on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main]
-
-jobs:
-  backend-tests:
-    runs-on: ubuntu-latest
-    
-    services:
-      mongodb:
-        image: mongo:6.0
-        env:
-          MONGO_INITDB_ROOT_USERNAME: test
-          MONGO_INITDB_ROOT_PASSWORD: test
-        ports:
-          - 27017:27017
-          
-      redis:
-        image: redis:7.0
-        ports:
-          - 6379:6379
-    
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Set up JDK 21
-        uses: actions/setup-java@v3
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          
-      - name: Cache Maven dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2
-          
-      - name: Run unit tests
-        run: mvn test
-        
-      - name: Run integration tests
-        run: mvn verify -Pintegration-tests
-        
-      - name: Generate test report
-        uses: dorny/test-reporter@v1
-        if: success() || failure()
-        with:
-          name: Backend Tests
-          path: target/surefire-reports/*.xml
-          reporter: java-junit
-          
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v3
-        with:
-          file: target/site/jacoco/jacoco.xml
-          
-  frontend-tests:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: 'openframe/services/openframe-frontend/package-lock.json'
-          
-      - name: Install dependencies
-        working-directory: openframe/services/openframe-frontend
-        run: npm ci
-        
-      - name: Run unit tests
-        working-directory: openframe/services/openframe-frontend
-        run: npm run test:coverage
-        
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v3
-        with:
-          file: openframe/services/openframe-frontend/coverage/lcov.info
-          
-  e2e-tests:
-    runs-on: ubuntu-latest
-    needs: [backend-tests, frontend-tests]
-    
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Start services
-        run: docker-compose -f docker-compose.test.yml up -d
-        
-      - name: Wait for services
-        run: ./scripts/wait-for-services.sh
-        
-      - name: Run Cypress tests
-        uses: cypress-io/github-action@v4
-        with:
-          working-directory: openframe/services/openframe-frontend
-          start: npm run dev
-          wait-on: 'https://localhost:3000'
-          
-      - name: Upload Cypress screenshots
-        uses: actions/upload-artifact@v3
-        if: failure()
-        with:
-          name: cypress-screenshots
-          path: openframe/services/openframe-frontend/cypress/screenshots
-```
-
-## Testing Best Practices
-
-### Test Naming Conventions
-
-**Backend Test Naming:**
-```text
-Pattern: should{ExpectedBehavior}When{StateUnderTest}
-
-Examples:
-- shouldCreateDeviceSuccessfullyWhenValidRequestProvided()
-- shouldThrowExceptionWhenDeviceNotFound()
-- shouldReturnEmptyListWhenNoDevicesExist()
-```
-
-**Frontend Test Naming:**
-```text
-Pattern: should {expected behavior} [when {conditions}]
-
-Examples:
-- should render device information correctly
-- should handle loading state when fetching devices
-- should display error message when API request fails
-```
-
-### Test Organization Principles
-
-1. **AAA Pattern**: Arrange, Act, Assert
-2. **Single Responsibility**: Each test verifies one behavior
-3. **Independent Tests**: No dependencies between tests
-4. **Descriptive Names**: Clear intent and expected outcome
-5. **Fail Fast**: Stop execution on first failure in CI
-
-### Mock and Stub Guidelines
-
-```java
-// Good: Mock external dependencies
-@Mock
-private DeviceRepository deviceRepository;
-
-@Mock 
-private ExternalApiClient externalApiClient;
-
-// Bad: Mock internal logic
-// Don't mock the class under test
-```
-
-```typescript
-// Good: Mock API calls
-jest.mock('@/services/api');
-
-// Bad: Mock React internals
-// Don't mock React hooks or core functionality
-```
-
-## Running Tests
-
-### Backend Tests
+### Generating Coverage Reports
 
 ```bash
-# Run all tests
-mvn test
+# Backend coverage
+mvn clean test jacoco:report
 
-# Run specific test class
-mvn test -Dtest=DeviceServiceTest
+# View HTML report
+open target/site/jacoco/index.html
 
-# Run tests with coverage
-mvn test jacoco:report
-
-# Run integration tests
-mvn verify -Pintegration-tests
-
-# Run tests with specific profile
-mvn test -Dspring.profiles.active=test
-```
-
-### Frontend Tests
-
-```bash
-cd openframe/services/openframe-frontend
-
-# Run all tests
-npm test
-
-# Run tests in watch mode
-npm run test:watch
-
-# Run tests with coverage
+# Frontend coverage
 npm run test:coverage
 
-# Run specific test file
-npm test -- DeviceCard.test.tsx
-
-# Update snapshots
-npm test -- --updateSnapshot
+# View HTML report  
+open coverage/index.html
 ```
 
-### E2E Tests
-
-```bash
-cd openframe/services/openframe-frontend
-
-# Run Cypress tests headlessly
-npm run cypress:run
-
-# Open Cypress GUI
-npm run cypress:open
-
-# Run specific spec
-npm run cypress:run -- --spec "cypress/e2e/devices.cy.ts"
-```
-
-## Next Steps
-
-To master testing in OpenFrame:
-
-1. **[Security Testing](../security/README.md)** - Security-focused testing strategies
-2. **[Contributing Guidelines](../contributing/guidelines.md)** - Code quality and review process  
-3. **[CI/CD Pipeline](../deployment/ci-cd.md)** - Automated testing in deployment pipeline
-
-## Testing Resources
-
-- **Jest Documentation**: https://jestjs.io/docs/getting-started
-- **React Testing Library**: https://testing-library.com/docs/react-testing-library/intro
-- **Spring Boot Testing**: https://spring.io/guides/gs/testing-web/
-- **Cypress Documentation**: https://docs.cypress.io/
-
-Join our [OpenMSP Slack community](https://join.slack.com/t/openmsp/shared_invite/zt-36bl7mx0h-3~U2nFH6nqHqoTPXMaHEHA) to discuss testing strategies and get help with test implementation!
+This comprehensive testing overview provides the foundation for maintaining high code quality in OpenFrame. The next sections cover contributing guidelines and development workflows.

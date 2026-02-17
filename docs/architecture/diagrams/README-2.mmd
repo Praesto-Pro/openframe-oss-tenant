@@ -1,6 +1,7 @@
 flowchart TD
-    Request["HTTP Request"] --> TenantFilter["TenantContextFilter"]
-    TenantFilter --> AuthServer["AuthorizationServerConfig"]
-    AuthServer --> KeyService["TenantKeyService"]
-    KeyService --> Mongo["MongoDB"]
-    AuthServer --> Jwt["JWT Issuance"]
+    Gateway --> ApiCore
+    ApiCore --> Controllers["REST Controllers"]
+    ApiCore --> GraphQL["GraphQL DataFetchers"]
+    Controllers --> Services["Domain Services"]
+    GraphQL --> Services
+    Services --> Mongo

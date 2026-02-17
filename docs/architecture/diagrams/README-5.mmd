@@ -1,5 +1,5 @@
-flowchart TD
-    Service["Service Layer"] --> Repo["Repository"]
-    Repo --> CustomImpl["Custom Repository"]
-    CustomImpl --> MongoTemplate["MongoTemplate"]
-    MongoTemplate --> MongoDB["MongoDB"]
+flowchart LR
+    Client --> Gateway
+    Gateway --> JwtValidation["JWT Validation"]
+    Gateway --> ApiKeyFilter["API Key Filter"]
+    Gateway --> Route["Route to Services"]

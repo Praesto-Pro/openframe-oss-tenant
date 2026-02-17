@@ -1,319 +1,248 @@
 # Prerequisites
 
-Before setting up OpenFrame, ensure your environment meets the following requirements.
+Before setting up OpenFrame, ensure your environment meets the following requirements. This guide covers system requirements, software dependencies, and account prerequisites for a successful deployment.
 
 ## System Requirements
 
-### Minimum Hardware Requirements
+### Backend Services (Java/Spring Boot)
 
 | Component | Minimum | Recommended |
 |-----------|---------|-------------|
-| **CPU** | 4 cores | 8+ cores |
-| **RAM** | 8 GB | 16+ GB |
-| **Storage** | 50 GB SSD | 100+ GB NVMe SSD |
-| **Network** | 1 Gbps | 10+ Gbps |
+| **CPU** | 2 cores | 4+ cores |
+| **RAM** | 4 GB | 8+ GB |
+| **Storage** | 20 GB | 50+ GB SSD |
+| **Java Version** | Java 21 | Java 21+ |
+| **OS** | Linux, macOS, Windows | Linux (Ubuntu 20.04+) |
 
-### Operating System Support
+### Frontend Application (Node.js/TypeScript)
 
-| Platform | Versions | Notes |
-|----------|----------|-------|
-| **Linux** | Ubuntu 20.04+, RHEL 8+, CentOS 8+ | Preferred for production |
-| **macOS** | 12.0+ (Monterey) | Development only |
-| **Windows** | Windows 10/11, Server 2019+ | With WSL2 for development |
+| Component | Requirement |
+|-----------|-------------|
+| **Node.js** | 18+ |
+| **npm/yarn** | Latest stable |
+| **Browser Support** | Chrome 90+, Firefox 88+, Safari 14+ |
 
-## Required Software
+### Client Agent (Rust)
 
-### Java Development Environment
+| Platform | Support Level |
+|----------|---------------|
+| **Windows** | ✅ Full support (Windows 10+) |
+| **macOS** | ✅ Full support (macOS 10.15+) |
+| **Linux** | ✅ Full support (Ubuntu 18.04+, CentOS 7+) |
 
-OpenFrame backend services require **Java 21** (LTS).
+## Software Dependencies
 
-```bash
-# Verify Java installation
-java -version
-# Expected output: openjdk version "21.x.x" or equivalent
-```
+### Required Infrastructure Components
 
-**Installation options:**
+#### Database Systems
+- **MongoDB** 5.0+ (primary data store)
+- **Apache Cassandra** 4.0+ (audit/event storage)
+- **Redis** 6.0+ (caching and enrichment)
 
-```bash
-# Ubuntu/Debian
-sudo apt update
-sudo apt install openjdk-21-jdk
+#### Messaging & Streaming
+- **Apache Kafka** 3.6.0+ (event streaming)
+- **NATS JetStream** 2.9+ (real-time messaging)
 
-# macOS (Homebrew)
-brew install openjdk@21
+#### Build Tools
+- **Maven** 3.8+ (Java backend build)
+- **Node.js** 18+ with npm/yarn (frontend build)
+- **Rust** 1.70+ (client agent build)
 
-# Windows (Chocolatey)
-choco install openjdk21
-```
+### Development Tools
 
-### Node.js Environment
-
-Frontend application requires **Node.js 18+** with npm.
-
-```bash
-# Verify Node.js installation
-node --version
-# Expected: v18.x.x or higher
-
-npm --version
-# Expected: 8.x.x or higher
-```
-
-**Installation options:**
-
-```bash
-# Ubuntu/Debian
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# macOS (Homebrew)
-brew install node@18
-
-# Windows (Chocolatey)
-choco install nodejs
-```
-
-### Build Tools
-
-| Tool | Purpose | Installation |
-|------|---------|--------------|
-| **Maven 3.8+** | Java build system | `apt install maven` / `brew install maven` |
-| **Git** | Version control | `apt install git` / `brew install git` |
-
-```bash
-# Verify Maven installation
-mvn --version
-# Expected: Apache Maven 3.8.x or higher
-```
-
-## Database Requirements
-
-### MongoDB
-
-**Version**: MongoDB 5.0+ (6.0+ recommended)
-
-```bash
-# Ubuntu/Debian installation
-wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add -
-echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
-sudo apt update
-sudo apt install -y mongodb-org
-
-# Start MongoDB service
-sudo systemctl start mongod
-sudo systemctl enable mongod
-```
-
-**Verification:**
-
-```bash
-mongosh --eval "db.version()"
-# Expected: 6.x.x or 5.x.x
-```
-
-### Apache Kafka (Optional for Development)
-
-**Version**: Kafka 3.6.0+
-
-```bash
-# Download and setup Kafka
-wget https://downloads.apache.org/kafka/2.13-3.6.0/kafka_2.13-3.6.0.tgz
-tar -xzf kafka_2.13-3.6.0.tgz
-cd kafka_2.13-3.6.0
-
-# Start Zookeeper
-bin/zookeeper-server-start.sh config/zookeeper.properties &
-
-# Start Kafka
-bin/kafka-server-start.sh config/server.properties &
-```
-
-### Apache Cassandra (Optional for Analytics)
-
-**Version**: Cassandra 4.0+
-
-```bash
-# Ubuntu/Debian
-echo "deb https://debian.cassandra.apache.org 41x main" | sudo tee -a /etc/apt/sources.list.d/cassandra.sources.list
-curl https://downloads.apache.org/cassandra/KEYS | sudo apt-key add -
-sudo apt update
-sudo apt install cassandra
-
-# Start Cassandra
-sudo systemctl start cassandra
-sudo systemctl enable cassandra
-```
-
-## Network and Security Requirements
-
-### Port Requirements
-
-| Service | Port | Protocol | Purpose |
-|---------|------|----------|---------|
-| **Frontend** | 3000 | HTTP/HTTPS | Web interface |
-| **API Gateway** | 8080 | HTTP/HTTPS | API routing |
-| **Authorization Server** | 8081 | HTTP/HTTPS | OAuth2/OIDC |
-| **MongoDB** | 27017 | TCP | Database |
-| **Kafka** | 9092 | TCP | Message streaming |
-| **NATS** | 4222 | TCP | Real-time messaging |
-
-### Firewall Configuration
-
-```bash
-# Ubuntu UFW example
-sudo ufw allow 3000/tcp
-sudo ufw allow 8080/tcp
-sudo ufw allow 8081/tcp
-sudo ufw allow 27017/tcp
-```
-
-### SSL/TLS Requirements
-
-For production deployments:
-
-- Valid SSL certificates for all public endpoints
-- TLS 1.2+ support
-- Strong cipher suites enabled
-
-**Development certificates:**
-
-```bash
-# Install mkcert for local development
-# macOS
-brew install mkcert
-mkcert -install
-
-# Ubuntu/Debian  
-sudo apt install libnss3-tools
-curl -s https://api.github.com/repos/FiloSottile/mkcert/releases/latest | grep browser_download_url | grep linux-amd64 | cut -d '"' -f 4 | wget -qi -
-chmod +x mkcert-*-linux-amd64
-sudo mv mkcert-*-linux-amd64 /usr/local/bin/mkcert
-mkcert -install
-
-# Generate localhost certificate
-mkcert localhost 127.0.0.1 ::1
-```
+| Tool | Purpose | Version |
+|------|---------|---------|
+| **Docker** | Containerization | 20.10+ |
+| **Docker Compose** | Local orchestration | 2.0+ |
+| **Git** | Version control | 2.30+ |
+| **curl** | API testing | Latest |
 
 ## Environment Variables
 
-Set these environment variables before starting OpenFrame:
+### Backend Configuration
 
-### Required Variables
+Set these environment variables for backend services:
 
 ```bash
-# Database configuration
-export MONGO_URI="mongodb://localhost:27017"
-export MONGO_DATABASE="openframe"
+# Database Connections
+MONGODB_URI=mongodb://localhost:27017/openframe
+CASSANDRA_CONTACT_POINTS=localhost:9042
+REDIS_URL=redis://localhost:6379
+
+# Messaging
+KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+NATS_URL=nats://localhost:4222
 
 # Security
-export JWT_SECRET="your-secure-jwt-secret-here"
+JWT_ISSUER_URI=http://localhost:8080/auth/realms/openframe
+SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_GOOGLE_ISSUER_URI=https://accounts.google.com
 
-# Application URLs
-export OPENFRAME_BASE_URL="https://localhost:3000"
-export API_BASE_URL="https://localhost:8080"
+# Application
+SERVER_PORT=8080
+SPRING_PROFILES_ACTIVE=local
 ```
 
-### Optional Variables
+### Frontend Configuration
+
+Create a `.env.local` file:
 
 ```bash
-# Kafka (if using streaming features)
-export KAFKA_BOOTSTRAP_SERVERS="localhost:9092"
-
-# Cassandra (if using analytics)
-export CASSANDRA_CONTACT_POINTS="127.0.0.1"
-export CASSANDRA_PORT=9042
-
-# NATS (for real-time features)
-export NATS_URL="nats://localhost:4222"
-
-# Development mode
-export NODE_ENV="development"
-export SPRING_PROFILES_ACTIVE="dev"
+NEXT_PUBLIC_API_URL=http://localhost:8080
+NEXT_PUBLIC_WEBSOCKET_URL=ws://localhost:8080
+NEXT_PUBLIC_AUTH_URL=http://localhost:8081
 ```
 
-## Access Requirements
+## Account Requirements
 
-### External Services
+### Third-Party Service Accounts
 
-If using SSO integration, you'll need:
+#### OAuth Providers (Optional, for SSO)
+- **Google OAuth2**: Client ID and Client Secret
+- **Microsoft Azure AD**: Application ID and Client Secret
 
-| Provider | Requirements |
-|----------|--------------|
-| **Google SSO** | Google Cloud Console project, OAuth2 client credentials |
-| **Microsoft SSO** | Azure AD app registration, client credentials |
-| **Custom OIDC** | OIDC provider configuration |
+#### AI Services (for Mingo AI)
+- **Anthropic API**: API key for Claude integration
+- **OpenAI API**: API key for GPT integration (alternative)
 
-### Network Access
+### Development Access
 
-Ensure your environment can access:
+- **GitHub Account**: For accessing repositories and CI/CD
+- **Docker Hub Account**: For pulling container images (optional)
 
-- **Package registries**: Maven Central, npm registry
-- **Container registries**: Docker Hub (if using containers)
-- **External APIs**: For tool integrations (Fleet, Tactical RMM)
+## Network Requirements
+
+### Ports Configuration
+
+Ensure these ports are available:
+
+| Service | Port | Protocol | Purpose |
+|---------|------|----------|---------|
+| **Gateway** | 8080 | HTTP/HTTPS | Main API gateway |
+| **Auth Server** | 8081 | HTTP | OAuth2/OIDC provider |
+| **Frontend** | 3000 | HTTP | React application (dev) |
+| **MongoDB** | 27017 | TCP | Database connection |
+| **Cassandra** | 9042 | TCP | Audit storage |
+| **Redis** | 6379 | TCP | Caching |
+| **Kafka** | 9092 | TCP | Event streaming |
+| **NATS** | 4222 | TCP | Real-time messaging |
+
+### Firewall Rules
+
+For production deployments:
+
+```bash
+# Allow inbound HTTP/HTTPS
+ufw allow 80/tcp
+ufw allow 443/tcp
+
+# Allow agent connections
+ufw allow 8080/tcp
+
+# Internal service communication (restrict to internal network)
+ufw allow from 10.0.0.0/8 to any port 27017
+ufw allow from 10.0.0.0/8 to any port 9042
+ufw allow from 10.0.0.0/8 to any port 6379
+```
 
 ## Verification Commands
 
 Run these commands to verify your environment:
 
+### Java Environment
 ```bash
-#!/bin/bash
-echo "Verifying OpenFrame Prerequisites..."
+java --version
+# Expected: openjdk 21.x.x
 
-# Check Java
-java -version || echo "❌ Java 21 required"
-
-# Check Node.js
-node --version || echo "❌ Node.js 18+ required"
-
-# Check Maven
-mvn --version || echo "❌ Maven 3.8+ required"
-
-# Check MongoDB
-mongosh --eval "db.version()" || echo "❌ MongoDB 5.0+ required"
-
-# Check Git
-git --version || echo "❌ Git required"
-
-# Check network connectivity
-curl -s https://repo1.maven.org/maven2/ > /dev/null && echo "✅ Maven Central accessible" || echo "❌ Maven Central not accessible"
-
-echo "Prerequisites check complete!"
+mvn --version
+# Expected: Apache Maven 3.8.x
 ```
 
-## Next Steps
+### Node.js Environment
+```bash
+node --version
+# Expected: v18.x.x or higher
 
-Once all prerequisites are met:
+npm --version
+# Expected: 9.x.x or higher
+```
 
-1. **[Quick Start Guide](quick-start.md)** - Get OpenFrame running quickly
-2. **[First Steps](first-steps.md)** - Initial configuration and setup
-3. **Development Environment Setup** - For contributors and developers
+### Rust Environment (for client development)
+```bash
+rustc --version
+# Expected: rustc 1.70.x or higher
 
-## Troubleshooting
+cargo --version
+# Expected: cargo 1.70.x or higher
+```
+
+### Docker Environment
+```bash
+docker --version
+# Expected: Docker version 20.10.x
+
+docker-compose --version
+# Expected: docker-compose version 2.x.x
+```
+
+## Security Considerations
+
+### SSL/TLS Certificates
+- Development: Self-signed certificates are acceptable
+- Production: Use valid SSL certificates from a trusted CA
+- Let's Encrypt recommended for cost-effective SSL
+
+### API Keys and Secrets
+- Store sensitive values in environment variables
+- Use secrets management in production (HashiCorp Vault, AWS Secrets Manager)
+- Rotate keys regularly
+
+### Network Security
+- Enable firewall on all systems
+- Use VPN for remote access to infrastructure
+- Implement network segmentation for production
+
+## Ready to Proceed?
+
+Once you've verified all prerequisites are met:
+
+1. ✅ System requirements satisfied
+2. ✅ Required software installed
+3. ✅ Environment variables configured
+4. ✅ Network ports available
+5. ✅ Accounts and API keys obtained
+
+You're ready to proceed with the [Quick Start Guide](./quick-start.md)!
+
+## Troubleshooting Prerequisites
 
 ### Common Issues
 
-**Java Version Conflicts:**
+**Java Version Mismatch**
 ```bash
+# Check multiple Java installations
+update-alternatives --config java
+
 # Set JAVA_HOME explicitly
 export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
-export PATH=$JAVA_HOME/bin:$PATH
 ```
 
-**MongoDB Connection Issues:**
+**Node.js Version Issues**
 ```bash
-# Check MongoDB status
-sudo systemctl status mongod
+# Install Node Version Manager (nvm)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
 
-# View MongoDB logs
-sudo tail -f /var/log/mongodb/mongod.log
+# Install and use Node.js 18
+nvm install 18
+nvm use 18
 ```
 
-**Port Conflicts:**
+**Port Conflicts**
 ```bash
-# Check which process is using a port
-sudo netstat -tlnp | grep :3000
-sudo lsof -i :3000
+# Check what's using a port
+lsof -i :8080
+
+# Kill process using port
+sudo kill -9 <PID>
 ```
 
-For additional help, join our [OpenMSP Slack community](https://join.slack.com/t/openmsp/shared_invite/zt-36bl7mx0h-3~U2nFH6nqHqoTPXMaHEHA).
+For additional help, join our [OpenMSP Slack community](https://join.slack.com/t/openmsp/shared_invite/zt-36bl7mx0h-3~U2nFH6nqHqoTPXMaHEHA) where our community can assist with environment setup questions.

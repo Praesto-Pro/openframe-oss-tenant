@@ -1,5 +1,5 @@
 flowchart TD
-    KafkaInbound["Inbound Topic"] --> Listener["JsonKafkaListener"]
-    Listener --> Deserializer["Tool Deserializer"]
-    Deserializer --> Enrichment["Enrichment Service"]
-    Enrichment --> Handler["Cassandra / Kafka Handler"]
+    Agent --> ClientService
+    Agent --> NATS
+    NATS --> Listeners
+    Listeners --> Mongo
