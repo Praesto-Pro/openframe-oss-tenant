@@ -1,5 +1,5 @@
-flowchart TD
-    Request["Incoming HTTP Request"] --> TenantFilter["TenantContextFilter"]
-    TenantFilter --> Context["TenantContext.setTenantId()"]
-    Context --> Security["Security & Token Processing"]
-    Security --> Clear["TenantContext.clear()"]
+flowchart LR
+    Request["Incoming Request"] --> Extract["TenantContextFilter"]
+    Extract -->|"setTenantId()"| Context["TenantContext (ThreadLocal)"]
+    Context --> Downstream["Security + Services"]
+    Downstream --> Clear["TenantContext.clear()"]

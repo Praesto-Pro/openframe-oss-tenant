@@ -1,314 +1,357 @@
 # Client Service Core
 
-## Overview
+The **Client Service Core** module is responsible for managing machine agents, tool connections, client authentication, and real-time machine lifecycle events within the OpenFrame platform. It acts as the runtime-facing service that bridges installed agents and external tools (such as Fleet MDM and MeshCentral) with the broader OpenFrame backend ecosystem.
 
-The **Client Service Core** module is responsible for managing OpenFrame agents (machines) within a tenant. It provides:
+This module plays a critical role in:
 
-- Agent registration and bootstrap
-- Agent authentication (OAuth-style token issuance)
-- Machine lifecycle tracking (connect, disconnect, heartbeat)
-- Installed agent and tool connection processing
-- Extensibility hooks for custom registration logic
+- Agent registration and onboarding
+- Machine online/offline state tracking
+- Tool-to-machine association
+- OAuth-based agent authentication
+- NATS-driven event consumption
+- Tool agent asset delivery (temporary implementation)
 
-This module acts as the backend control plane for OpenFrame client agents deployed on endpoints. It integrates with messaging (NATS JetStream), data-access modules, and the broader security and authorization infrastructure.
-
----
-
-## Architectural Context
-
-Within the OpenFrame platform, the Client Service Core sits between:
-
-- **Client agents** running on machines
-- **Messaging infrastructure (NATS)** for event-driven updates
-- **Data access layers** (Mongo repositories)
-- **Security and OAuth components** for token issuance
-
-```mermaid
-flowchart LR
-    Agent["OpenFrame Agent"] -->|"Register"| AgentController["Agent Controller"]
-    Agent -->|"OAuth Token"| AgentAuthController["Agent Auth Controller"]
-
-    Agent -->|"Heartbeat"| HeartbeatListener["Machine Heartbeat Listener"]
-    Agent -->|"Installed Agent Event"| InstalledAgentListener["Installed Agent Listener"]
-    Agent -->|"Tool Connection Event"| ToolConnectionListener["Tool Connection Listener"]
-    Agent -->|"Connect/Disconnect"| ClientConnectionListener["Client Connection Listener"]
-
-    AgentController --> RegistrationService["Agent Registration Service"]
-    AgentAuthController --> AuthService["Agent Auth Service"]
-
-    HeartbeatListener --> MachineStatusService["Machine Status Service"]
-    ClientConnectionListener --> MachineStatusService
-    InstalledAgentListener --> InstalledAgentService["Installed Agent Service"]
-    ToolConnectionListener --> ToolConnectionService["Tool Connection Service"]
-
-    MachineStatusService --> Mongo[("MongoDB")]
-    InstalledAgentService --> Mongo
-    ToolConnectionService --> Mongo
-    RegistrationService --> Mongo
-```
+It integrates tightly with the data storage layer (MongoDB, Redis), the messaging layer (NATS JetStream), and upstream API services.
 
 ---
 
-## Core Responsibilities
+## High-Level Responsibilities
 
-### 1. Agent Authentication
+The Client Service Core provides:
 
-**Primary Component:** `AgentAuthController`
-
-Endpoint:
-
-- `POST /oauth/token`
-
-This controller supports token issuance for client agents using OAuth-style parameters:
-
-- `grant_type`
-- `client_id`
-- `client_secret`
-- `refresh_token`
-
-It delegates to `AgentAuthService` to:
-
-- Validate credentials
-- Issue access tokens
-- Handle refresh flows
-
-Error handling ensures:
-
-- `401` for invalid credentials
-- `400` for generic server errors
-
-This integrates with the broader security infrastructure (JWT, OAuth, tenant-aware auth).
+1. **Agent Registration API** – Secure onboarding of machines.
+2. **Agent OAuth Token Issuance** – Client credentials & refresh flows.
+3. **Machine Lifecycle Processing** – Heartbeats and connection events.
+4. **Tool Connection Processing** – Associating tools to machines.
+5. **Installed Agent Tracking** – Tracking external tool agents per machine.
+6. **Tool Agent ID Transformation** – Tool-specific ID normalization.
+7. **Password Encoding Configuration** – Secure credential hashing.
 
 ---
 
-### 2. Agent Registration
-
-**Primary Component:** `AgentController`
-
-Endpoint:
-
-- `POST /api/agents/register`
-
-Key characteristics:
-
-- Requires `X-Initial-Key` header for bootstrap security
-- Accepts `AgentRegistrationRequest` payload
-- Delegates to `AgentRegistrationService`
-
-#### AgentRegistrationRequest
-
-Captures machine identity and metadata:
-
-- Core identification: hostname, organizationId
-- Network info: IP, MAC, UUID
-- Agent metadata: version, status
-- Hardware: serial number, manufacturer, model
-- OS info: type, version, build, timezone
-
-This enables the system to:
-
-- Create or update a machine record
-- Associate it with an organization
-- Initialize its lifecycle state
-
----
-
-### 3. Extensible Registration Processing
-
-**Primary Component:** `DefaultAgentRegistrationProcessor`
-
-This class provides a default no-op implementation of `AgentRegistrationProcessor`.
-
-Design goals:
-
-- Allow tenants or integrators to override post-registration behavior
-- Avoid forcing custom implementations
-- Enable plug-in style customization
+## Architectural Overview
 
 ```mermaid
 flowchart TD
-    RegistrationService["Agent Registration Service"] --> Processor["Agent Registration Processor"]
-    Processor -->|"Default"| DefaultProcessor["Default Agent Registration Processor"]
-    Processor -->|"Custom Override"| CustomProcessor["Custom Implementation"]
+    Agent["Installed Agent"] -->|"/api/agents/register"| AgentController["AgentController"]
+    Agent -->|"/oauth/token"| AgentAuthController["AgentAuthController"]
+
+    AgentController --> AgentRegistrationService["AgentRegistrationService"]
+    AgentRegistrationService --> RegistrationProcessor["DefaultAgentRegistrationProcessor"]
+
+    Nats["NATS JetStream"] --> InstalledAgentListener["InstalledAgentListener"]
+    Nats --> ToolConnectionListener["ToolConnectionListener"]
+    Nats --> MachineHeartbeatListener["MachineHeartbeatListener"]
+    Nats --> ClientConnectionListener["ClientConnectionListener"]
+
+    InstalledAgentListener --> InstalledAgentService["InstalledAgentService"]
+    ToolConnectionListener --> ToolConnectionService["ToolConnectionService"]
+    MachineHeartbeatListener --> MachineStatusService["MachineStatusService"]
+    ClientConnectionListener --> MachineStatusService
+
+    ToolConnectionService --> Transformer["ToolAgentIdTransformer"]
+    Transformer --> FleetTransformer["FleetMdmAgentIdTransformer"]
+    Transformer --> MeshTransformer["MeshCentralAgentIdTransformer"]
 ```
 
-If no custom bean is provided, the default processor logs the event and performs no additional action.
+The module is event-driven for runtime updates and REST-driven for agent onboarding and authentication.
 
 ---
 
-## Event-Driven Machine Lifecycle
+## Core Components
 
-The Client Service Core heavily relies on **NATS JetStream** and subject-based messaging.
+### 1. Configuration Layer
 
-### 4. Machine Connection Events
+#### PasswordEncoderConfig
+Provides a Spring `PasswordEncoder` bean using `BCryptPasswordEncoder`.
 
-**Primary Component:** `ClientConnectionListener`
+**Purpose:**
+- Secure hashing of client secrets
+- Used by authentication-related services
 
-Consumers:
+```java
+@Bean
+public PasswordEncoder passwordEncoder() {
+    return new BCryptPasswordEncoder();
+}
+```
 
-- Machine connected
-- Machine disconnected
+---
+
+### 2. REST Controllers
+
+#### AgentAuthController
+**Endpoint:** `/oauth/token`
+
+Handles OAuth-style token issuance for machine agents.
+
+Supported parameters:
+- `grant_type`
+- `refresh_token`
+- `client_id`
+- `client_secret`
 
 Flow:
 
-1. Deserialize `ClientConnectionEvent`
-2. Extract machine ID
-3. Update status via `MachineStatusService`
+```mermaid
+sequenceDiagram
+    participant Agent
+    participant Controller as "AgentAuthController"
+    participant Service as "AgentAuthService"
 
-This keeps machine availability in sync with real-time agent connectivity.
+    Agent->>Controller: POST /oauth/token
+    Controller->>Service: issueClientToken(...)
+    Service-->>Controller: AgentTokenResponse
+    Controller-->>Agent: JSON Token Response
+```
+
+Error handling:
+- `IllegalArgumentException` → 401 Unauthorized
+- Other exceptions → 400 with `server_error`
 
 ---
 
-### 5. Machine Heartbeats
+#### AgentController
+**Endpoint:** `/api/agents/register`
 
-**Primary Component:** `MachineHeartbeatListener`
+Registers a machine agent using an `X-Initial-Key` header.
 
-Subject:
+Input: `AgentRegistrationRequest`
 
-- `machine.*.heartbeat`
+Key data captured:
+- Hostname
+- Organization ID
+- Network information (IP, MAC, UUID)
+- Hardware information
+- OS information
+- Device status & type
+
+This delegates to `AgentRegistrationService`, which may invoke post-processing hooks.
+
+---
+
+#### ToolAgentFileController
+**Endpoint:** `/tool-agent/{assetId}`
+
+Temporary implementation for delivering tool agent binaries.
 
 Behavior:
+- Returns platform-specific assets
+- Supports macOS and Windows
+- Throws exception for unsupported OS
 
+> Marked as temporary until artifact repository integration is implemented.
+
+---
+
+## 3. Event-Driven Listeners (NATS)
+
+The Client Service Core consumes real-time events from NATS JetStream.
+
+### MachineHeartbeatListener
+
+**Subject:** `machine.*.heartbeat`
+
+Responsibilities:
 - Extract machine ID from subject
-- Generate service-side timestamp
-- Call `MachineStatusService.processHeartbeat(...)`
+- Generate server-side timestamp
+- Update machine status to active
 
 ```mermaid
 flowchart LR
-    Agent["Agent"] -->|"Heartbeat"| NATS["NATS"]
-    NATS --> HeartbeatListener["Machine Heartbeat Listener"]
-    HeartbeatListener --> MachineStatusService["Machine Status Service"]
-    MachineStatusService --> Mongo[("MongoDB")]
+    NatsHB["machine.*.heartbeat"] --> Listener["MachineHeartbeatListener"]
+    Listener --> StatusService["MachineStatusService"]
+    StatusService --> Online["Update Last Seen"]
 ```
 
-This ensures liveness detection even when explicit connect/disconnect events are unreliable.
+---
+
+### ClientConnectionListener
+
+Processes:
+- Machine connected events
+- Machine disconnected events
+
+Updates machine status:
+- `updateToOnline()`
+- `updateToOffline()`
+
+Fallback note indicates heartbeat mechanism compensates for NATS downtime.
 
 ---
 
-### 6. Installed Agent Processing
+### InstalledAgentListener
 
-**Primary Component:** `InstalledAgentListener`
-
-JetStream configuration:
-
-- Stream: `INSTALLED_AGENTS`
-- Durable consumer
-- Explicit ack policy
-- Max delivery attempts
-
-Processing steps:
-
-1. Extract machine ID from subject
-2. Deserialize `InstalledAgentMessage`
-3. Call `InstalledAgentService.addInstalledAgent(...)`
-4. Acknowledge on success
-5. Allow redelivery on failure
-
-Key reliability features:
-
-- Durable consumer
-- Explicit ack
-- Delivery count tracking
-- Last-attempt detection
-
----
-
-### 7. Tool Connection Events
-
-**Primary Component:** `ToolConnectionListener`
+**Stream:** `INSTALLED_AGENTS`  
+**Subject:** `machine.*.installed-agent`
 
 JetStream configuration:
-
-- Stream: `TOOL_CONNECTIONS`
-- Delivery group for horizontal scaling
+- Durable consumer
 - Explicit ack policy
+- Max delivery retries: 50
+- Ack wait: 30 seconds
 
-Processing steps:
-
-1. Extract machine ID from subject
-2. Deserialize `ToolConnectionMessage`
-3. Call `ToolConnectionService.addToolConnection(...)`
-4. Ack on success
+Processing flow:
 
 ```mermaid
 flowchart TD
-    Agent["Agent"] -->|"Tool Connection"| NATS["NATS JetStream"]
-    NATS --> ToolListener["Tool Connection Listener"]
-    ToolListener --> ToolConnectionService["Tool Connection Service"]
-    ToolConnectionService --> Mongo[("MongoDB")]
+    Message["InstalledAgentMessage"] --> Parse["Deserialize JSON"]
+    Parse --> Extract["Extract machineId"]
+    Extract --> ServiceCall["InstalledAgentService.addInstalledAgent"]
+    ServiceCall --> Ack["message.ack()"]
 ```
 
-The use of delivery groups enables multiple service instances to scale horizontally while preserving message semantics.
+If processing fails:
+- Message remains unacknowledged
+- Redelivery occurs until max attempts
 
 ---
 
-## Security and Cryptography
+### ToolConnectionListener
 
-### PasswordEncoderConfig
+**Stream:** `TOOL_CONNECTIONS`  
+**Subject:** `machine.*.tool-connection`
 
-Defines a `PasswordEncoder` bean using:
+Processes tool connection events and:
+- Extracts machine ID
+- Transforms tool agent ID (if required)
+- Persists tool association
+- Acknowledges message on success
 
-- `BCryptPasswordEncoder`
-
-Purpose:
-
-- Secure hashing of secrets
-- Compatibility with Spring Security
-- Safe storage of client credentials
-
-This is typically used in combination with:
-
-- Agent authentication
-- Client credential validation
-- Secure storage of bootstrap secrets
+Implements delivery group support to enable horizontal scaling.
 
 ---
 
-## Reliability and Lifecycle Management
+## 4. Agent Registration Processing
 
-Each NATS listener:
+### DefaultAgentRegistrationProcessor
 
-- Subscribes on `ApplicationReadyEvent`
-- Uses dispatcher-based threading
-- Supports graceful shutdown via `@PreDestroy`
-- Drains dispatcher with timeout
+A conditional default implementation of `AgentRegistrationProcessor`.
 
-JetStream-based listeners:
+- Used when no custom processor bean is defined
+- Provides no-op post-processing
+- Enables extensibility for enterprise customization
 
-- Use durable consumers
-- Configure `AckPolicy.Explicit`
-- Limit `maxDeliver`
-- Implement redelivery logic
-
-This ensures:
-
-- At-least-once processing
-- Controlled retry behavior
-- Resilience across restarts
+```mermaid
+flowchart LR
+    Registration["AgentRegistrationService"] --> Processor["AgentRegistrationProcessor"]
+    Processor --> DefaultImpl["DefaultAgentRegistrationProcessor"]
+```
 
 ---
 
-## Integration Points
+## 5. Tool Agent ID Transformation
 
-The Client Service Core integrates with:
+When tools emit events, their internal IDs may not match OpenFrame expectations.
 
-- Data access modules for machine and organization persistence
-- Security and OAuth modules for token issuance
-- Messaging infrastructure (NATS JetStream)
-- Management services for bootstrap and configuration
+The module provides pluggable ID transformers via `ToolAgentIdTransformer`.
 
-It forms the operational backbone of agent-to-platform communication.
+### FleetMdmAgentIdTransformer
+
+Tool Type: `FLEET_MDM`
+
+Responsibilities:
+- Query Fleet MDM API
+- Convert UUID → Fleet host ID
+- Validate OS data presence
+- Retry logic based on delivery attempt
+
+Flow:
+
+```mermaid
+flowchart TD
+    UUID["Fleet UUID"] --> Search["FleetMdmClient.searchHosts"]
+    Search --> Match{{"Matching Host?"}}
+    Match -->|"Yes"| Transform["Return host ID"]
+    Match -->|"No & not last"| Retry["Throw Exception"]
+    Match -->|"No & last"| Fallback["Return UUID"]
+```
+
+This ensures consistency between external Fleet MDM identifiers and internal OpenFrame references.
+
+---
+
+### MeshCentralAgentIdTransformer
+
+Tool Type: `MESHCENTRAL`
+
+Simple transformation:
+
+```text
+node// + agentToolId
+```
+
+Example:
+
+```text
+Original: abc123
+Transformed: node//abc123
+```
+
+---
+
+## Data Model Integration
+
+The module interacts with:
+
+- Machine entities
+- Installed agent records
+- Tool connection records
+- User and organization context
+
+These are persisted via the shared data layer (MongoDB repositories and related services).
+
+---
+
+## Runtime Lifecycle
+
+Application startup flow:
+
+```mermaid
+flowchart TD
+    Start["ApplicationReadyEvent"] --> SubscribeHB["Subscribe Heartbeats"]
+    Start --> SubscribeTool["Subscribe Tool Connections"]
+    Start --> SubscribeInstalled["Subscribe Installed Agents"]
+    Start --> SubscribeConn["Subscribe Client Connections"]
+```
+
+Shutdown flow:
+- Drain NATS dispatcher
+- Unsubscribe JetStream consumers
+- Ensure clean message acknowledgment state
+
+---
+
+## Security Considerations
+
+- BCrypt password hashing for client secrets
+- OAuth-based token issuance for agents
+- Header-based initial key validation for registration
+- Explicit acknowledgment for message durability
+- Retry-safe event processing
+
+---
+
+## Extensibility Points
+
+The module is designed for customization:
+
+1. Replace `AgentRegistrationProcessor`
+2. Add new `ToolAgentIdTransformer` implementations
+3. Extend event processing services
+4. Customize NATS stream configurations
 
 ---
 
 ## Summary
 
-The **Client Service Core** module provides:
+The **Client Service Core** module is the runtime integration backbone for machine agents in OpenFrame. It:
 
-- Secure agent registration and authentication
-- Real-time machine lifecycle tracking
-- Event-driven installed agent and tool connection management
-- Extensibility for custom registration workflows
-- Reliable, durable message processing via NATS JetStream
+- Onboards machines securely
+- Issues authentication tokens
+- Tracks machine lifecycle events
+- Integrates with external tools
+- Consumes real-time messaging streams
+- Provides extensible transformation and processing hooks
 
-It is a critical component of the OpenFrame control plane, ensuring that endpoint agents remain authenticated, observable, and synchronized with the platform state.
+It forms the operational boundary between installed agents and the broader OpenFrame platform ecosystem.

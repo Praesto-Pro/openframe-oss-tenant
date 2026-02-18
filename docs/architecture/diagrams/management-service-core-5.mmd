@@ -1,7 +1,8 @@
-flowchart LR
-    Mgmt["Management Service Core"] --> SaveStream["NatsStreamManagementService.save"]
-    SaveStream --> ToolInstall["TOOL_INSTALLATION"]
-    SaveStream --> ClientUpdate["CLIENT_UPDATE"]
-    SaveStream --> ToolUpdate["TOOL_UPDATE"]
-    SaveStream --> ToolConn["TOOL_CONNECTIONS"]
-    SaveStream --> Installed["INSTALLED_AGENTS"]
+flowchart TD
+    Start["Application Startup"] --> AgentSecret["Initialize Agent Secret"]
+    AgentSecret --> Streams["Provision NATS Streams"]
+    Streams --> Agents["Initialize Tool Agents"]
+    Agents --> ClientConfig["Initialize Client Configuration"]
+    ClientConfig --> PinotInit["Deploy Pinot Config"]
+    PinotInit --> DebeziumInit["Initialize Debezium Connectors"]
+    DebeziumInit --> Ready["System Ready"]

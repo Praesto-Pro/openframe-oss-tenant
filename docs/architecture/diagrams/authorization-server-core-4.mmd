@@ -1,5 +1,5 @@
-flowchart TD
-    JwtRequest["JWT Signing Request"] --> TenantId["Resolve Tenant ID"]
-    TenantId --> KeyService["TenantKeyService"]
-    KeyService --> RSAKey["Active RSA Key"]
-    RSAKey --> JWKS["JWKSet Returned"]
+flowchart LR
+    OAuthLogin["/oauth2/authorization/{provider}"] --> DynamicRepo["DynamicClientRegistrationRepository"]
+    DynamicRepo --> SSOService["DynamicClientRegistrationService"]
+    SSOService --> TenantConfig[("SSOPerTenantConfig")]
+    TenantConfig --> ClientRegistration["ClientRegistration"]

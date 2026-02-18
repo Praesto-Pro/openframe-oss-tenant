@@ -1,4 +1,4 @@
 flowchart TD
-    OAuthFlow["OAuth2 Login"] --> ResolveTenant["Resolve Tenant"]
-    ResolveTenant --> DynamicService["DynamicClientRegistrationService"]
-    DynamicService --> ClientReg["ClientRegistration"]
+    OAuth2Authorization --> Mapper["MongoAuthorizationMapper"]
+    Mapper --> MongoDoc["MongoOAuth2Authorization"]
+    MongoDoc --> Repository["MongoOAuth2AuthorizationRepository"]

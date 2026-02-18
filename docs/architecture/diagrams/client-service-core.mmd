@@ -1,21 +1,20 @@
-flowchart LR
-    Agent["OpenFrame Agent"] -->|"Register"| AgentController["Agent Controller"]
-    Agent -->|"OAuth Token"| AgentAuthController["Agent Auth Controller"]
+flowchart TD
+    Agent["Installed Agent"] -->|"/api/agents/register"| AgentController["AgentController"]
+    Agent -->|"/oauth/token"| AgentAuthController["AgentAuthController"]
 
-    Agent -->|"Heartbeat"| HeartbeatListener["Machine Heartbeat Listener"]
-    Agent -->|"Installed Agent Event"| InstalledAgentListener["Installed Agent Listener"]
-    Agent -->|"Tool Connection Event"| ToolConnectionListener["Tool Connection Listener"]
-    Agent -->|"Connect/Disconnect"| ClientConnectionListener["Client Connection Listener"]
+    AgentController --> AgentRegistrationService["AgentRegistrationService"]
+    AgentRegistrationService --> RegistrationProcessor["DefaultAgentRegistrationProcessor"]
 
-    AgentController --> RegistrationService["Agent Registration Service"]
-    AgentAuthController --> AuthService["Agent Auth Service"]
+    Nats["NATS JetStream"] --> InstalledAgentListener["InstalledAgentListener"]
+    Nats --> ToolConnectionListener["ToolConnectionListener"]
+    Nats --> MachineHeartbeatListener["MachineHeartbeatListener"]
+    Nats --> ClientConnectionListener["ClientConnectionListener"]
 
-    HeartbeatListener --> MachineStatusService["Machine Status Service"]
+    InstalledAgentListener --> InstalledAgentService["InstalledAgentService"]
+    ToolConnectionListener --> ToolConnectionService["ToolConnectionService"]
+    MachineHeartbeatListener --> MachineStatusService["MachineStatusService"]
     ClientConnectionListener --> MachineStatusService
-    InstalledAgentListener --> InstalledAgentService["Installed Agent Service"]
-    ToolConnectionListener --> ToolConnectionService["Tool Connection Service"]
 
-    MachineStatusService --> Mongo[("MongoDB")]
-    InstalledAgentService --> Mongo
-    ToolConnectionService --> Mongo
-    RegistrationService --> Mongo
+    ToolConnectionService --> Transformer["ToolAgentIdTransformer"]
+    Transformer --> FleetTransformer["FleetMdmAgentIdTransformer"]
+    Transformer --> MeshTransformer["MeshCentralAgentIdTransformer"]

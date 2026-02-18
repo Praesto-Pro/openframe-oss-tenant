@@ -1,248 +1,269 @@
 # Prerequisites
 
-Before setting up OpenFrame, ensure your environment meets the following requirements. This guide covers system requirements, software dependencies, and account prerequisites for a successful deployment.
+Before setting up OpenFrame, ensure your development environment meets these requirements. This guide covers all necessary software, system requirements, and preparatory steps.
 
 ## System Requirements
 
-### Backend Services (Java/Spring Boot)
+### Minimum Hardware Specifications
 
-| Component | Minimum | Recommended |
-|-----------|---------|-------------|
-| **CPU** | 2 cores | 4+ cores |
-| **RAM** | 4 GB | 8+ GB |
-| **Storage** | 20 GB | 50+ GB SSD |
-| **Java Version** | Java 21 | Java 21+ |
-| **OS** | Linux, macOS, Windows | Linux (Ubuntu 20.04+) |
+| Component | Requirement | Recommended |
+|-----------|------------|-------------|
+| **CPU** | 4 cores | 8+ cores |
+| **RAM** | 8 GB | 16+ GB |
+| **Storage** | 50 GB available | 100+ GB SSD |
+| **Network** | Stable internet connection | High-speed broadband |
 
-### Frontend Application (Node.js/TypeScript)
+### Supported Operating Systems
 
-| Component | Requirement |
-|-----------|-------------|
-| **Node.js** | 18+ |
-| **npm/yarn** | Latest stable |
-| **Browser Support** | Chrome 90+, Firefox 88+, Safari 14+ |
+| OS | Version | Notes |
+|----|---------|-------|
+| **macOS** | 12.0+ (Monterey) | Primary development platform |
+| **Linux** | Ubuntu 20.04+, Debian 11+, RHEL 8+ | Server deployment ready |
+| **Windows** | Windows 10/11 with WSL2 | Development with Linux subsystem |
 
-### Client Agent (Rust)
+## Required Software
 
-| Platform | Support Level |
-|----------|---------------|
-| **Windows** | ✅ Full support (Windows 10+) |
-| **macOS** | ✅ Full support (macOS 10.15+) |
-| **Linux** | ✅ Full support (Ubuntu 18.04+, CentOS 7+) |
+### Core Development Tools
 
-## Software Dependencies
+| Tool | Version | Purpose | Installation |
+|------|---------|---------|-------------|
+| **Java JDK** | 21+ | Backend services runtime | [OpenJDK 21](https://openjdk.org/) or [Oracle JDK 21](https://www.oracle.com/java/technologies/downloads/) |
+| **Node.js** | 18+ | AI integration and tooling | [Node.js Downloads](https://nodejs.org/) |
+| **Maven** | 3.8+ | Java build tool | [Maven Installation](https://maven.apache.org/install.html) |
+| **Git** | 2.30+ | Version control | [Git Downloads](https://git-scm.com/downloads) |
 
-### Required Infrastructure Components
+### Container & Orchestration (Required)
 
-#### Database Systems
-- **MongoDB** 5.0+ (primary data store)
-- **Apache Cassandra** 4.0+ (audit/event storage)
-- **Redis** 6.0+ (caching and enrichment)
+| Tool | Version | Purpose | Installation |
+|------|---------|---------|-------------|
+| **Docker** | 24.0+ | Container runtime | [Docker Desktop](https://www.docker.com/products/docker-desktop/) |
+| **Docker Compose** | 2.20+ | Multi-container orchestration | Included with Docker Desktop |
 
-#### Messaging & Streaming
-- **Apache Kafka** 3.6.0+ (event streaming)
-- **NATS JetStream** 2.9+ (real-time messaging)
+### SSL/TLS Development Certificates
 
-#### Build Tools
-- **Maven** 3.8+ (Java backend build)
-- **Node.js** 18+ with npm/yarn (frontend build)
-- **Rust** 1.70+ (client agent build)
+| Tool | Purpose | Installation |
+|------|---------|-------------|
+| **mkcert** | Local HTTPS development | macOS: `brew install mkcert`<br>Ubuntu: `sudo apt install mkcert libnss3-tools`<br>Manual: [mkcert releases](https://github.com/FiloSottile/mkcert/releases) |
 
-### Development Tools
+### Database & Messaging Infrastructure
 
-| Tool | Purpose | Version |
-|------|---------|---------|
-| **Docker** | Containerization | 20.10+ |
-| **Docker Compose** | Local orchestration | 2.0+ |
-| **Git** | Version control | 2.30+ |
-| **curl** | API testing | Latest |
+The following services will be run via Docker Compose (no local installation required):
+
+| Service | Version | Purpose |
+|---------|---------|---------|
+| **MongoDB** | 7.0+ | Primary database |
+| **Apache Kafka** | 3.6+ | Event streaming |
+| **Redis** | 7.0+ | Caching & sessions |
+| **Apache Cassandra** | 4.0+ | Time-series data |
+| **Apache Pinot** | 1.2+ | Analytics engine |
+| **NATS** | 2.10+ | Real-time messaging |
+
+## Development Environment Setup
+
+### 1. Verify Java Installation
+
+```bash
+java --version
+```
+
+**Expected output:**
+```text
+openjdk 21.0.1 2023-10-17
+OpenJDK Runtime Environment (build 21.0.1+12-29)
+OpenJDK 64-Bit Server VM (build 21.0.1+12-29, mixed mode, sharing)
+```
+
+### 2. Verify Node.js Installation
+
+```bash
+node --version
+npm --version
+```
+
+**Expected output:**
+```text
+v18.18.0
+9.8.1
+```
+
+### 3. Verify Maven Installation
+
+```bash
+mvn --version
+```
+
+**Expected output:**
+```text
+Apache Maven 3.9.5
+Maven home: /opt/maven
+Java version: 21.0.1, vendor: Eclipse Adoptium
+```
+
+### 4. Verify Docker Installation
+
+```bash
+docker --version
+docker-compose --version
+```
+
+**Expected output:**
+```text
+Docker version 24.0.6
+Docker Compose version v2.21.0
+```
+
+### 5. Set Up mkcert for HTTPS
+
+mkcert enables local HTTPS development without certificate warnings.
+
+**Installation:**
+
+```bash
+# macOS
+brew install mkcert
+mkcert -install
+
+# Ubuntu/Debian
+sudo apt update
+sudo apt install mkcert libnss3-tools
+mkcert -install
+
+# Windows (via Chocolatey)
+choco install mkcert
+mkcert -install
+```
+
+**Verify installation:**
+```bash
+mkcert -CAROOT
+```
+
+This should display the certificate authority root directory path.
+
+### 6. Configure Git (if not already done)
+
+```bash
+git config --global user.name "Your Name"
+git config --global user.email "your.email@example.com"
+```
 
 ## Environment Variables
 
-### Backend Configuration
+Set up these environment variables in your shell profile (`~/.bashrc`, `~/.zshrc`, or equivalent):
 
-Set these environment variables for backend services:
+### Required Variables
 
 ```bash
-# Database Connections
-MONGODB_URI=mongodb://localhost:27017/openframe
-CASSANDRA_CONTACT_POINTS=localhost:9042
-REDIS_URL=redis://localhost:6379
+# Java
+export JAVA_HOME="/path/to/java/21"
 
-# Messaging
-KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-NATS_URL=nats://localhost:4222
+# Maven (if not in PATH)
+export MAVEN_HOME="/path/to/maven"
+export PATH="$MAVEN_HOME/bin:$PATH"
 
-# Security
-JWT_ISSUER_URI=http://localhost:8080/auth/realms/openframe
-SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_GOOGLE_ISSUER_URI=https://accounts.google.com
-
-# Application
-SERVER_PORT=8080
-SPRING_PROFILES_ACTIVE=local
+# OpenFrame Development
+export OPENFRAME_ENV="development"
+export OPENFRAME_PROFILE="local"
 ```
 
-### Frontend Configuration
-
-Create a `.env.local` file:
+### Optional Variables
 
 ```bash
-NEXT_PUBLIC_API_URL=http://localhost:8080
-NEXT_PUBLIC_WEBSOCKET_URL=ws://localhost:8080
-NEXT_PUBLIC_AUTH_URL=http://localhost:8081
+# Docker resource limits (adjust based on your system)
+export COMPOSE_DOCKER_CLI_BUILD=1
+export DOCKER_BUILDKIT=1
+
+# JVM options for development
+export MAVEN_OPTS="-Xmx2g -XX:+UseG1GC"
 ```
 
 ## Account Requirements
 
-### Third-Party Service Accounts
+### OpenMSP Community Access
+- Join our Slack community: [OpenMSP Slack](https://join.slack.com/t/openmsp/shared_invite/zt-36bl7mx0h-3~U2nFH6nqHqoTPXMaHEHA)
+- No GitHub issues or discussions - all support happens in the community
 
-#### OAuth Providers (Optional, for SSO)
-- **Google OAuth2**: Client ID and Client Secret
-- **Microsoft Azure AD**: Application ID and Client Secret
+### External Service Accounts (Optional)
+For full functionality, you may want accounts for:
 
-#### AI Services (for Mingo AI)
-- **Anthropic API**: API key for Claude integration
-- **OpenAI API**: API key for GPT integration (alternative)
+| Service | Purpose | Required Level |
+|---------|---------|----------------|
+| **Anthropic** | AI integration | API access |
+| **Google OAuth** | SSO authentication | OAuth2 app registration |
+| **Microsoft Azure** | Enterprise SSO | OAuth2 app registration |
 
-### Development Access
+## Port Requirements
 
-- **GitHub Account**: For accessing repositories and CI/CD
-- **Docker Hub Account**: For pulling container images (optional)
+Ensure these ports are available on your development machine:
 
-## Network Requirements
+| Port | Service | Purpose |
+|------|---------|---------|
+| **8080** | API Service | REST/GraphQL API |
+| **8081** | Gateway Service | API Gateway |
+| **8082** | Authorization Server | OAuth2/OIDC |
+| **8083** | External API | Public API |
+| **8084** | Management Service | Admin operations |
+| **8085** | Stream Service | Event processing |
+| **8086** | Client Service | Agent communication |
+| **3000** | Frontend | Next.js development |
+| **5432** | PostgreSQL | Database (if using) |
+| **27017** | MongoDB | Primary database |
+| **6379** | Redis | Cache & sessions |
+| **9092** | Kafka | Event streaming |
+| **9042** | Cassandra | Time-series data |
+| **8123** | Pinot Controller | Analytics |
+| **4222** | NATS | Real-time messaging |
 
-### Ports Configuration
+## Verification Checklist
 
-Ensure these ports are available:
+Before proceeding to the Quick Start guide, verify you have:
 
-| Service | Port | Protocol | Purpose |
-|---------|------|----------|---------|
-| **Gateway** | 8080 | HTTP/HTTPS | Main API gateway |
-| **Auth Server** | 8081 | HTTP | OAuth2/OIDC provider |
-| **Frontend** | 3000 | HTTP | React application (dev) |
-| **MongoDB** | 27017 | TCP | Database connection |
-| **Cassandra** | 9042 | TCP | Audit storage |
-| **Redis** | 6379 | TCP | Caching |
-| **Kafka** | 9092 | TCP | Event streaming |
-| **NATS** | 4222 | TCP | Real-time messaging |
+- [ ] Java JDK 21+ installed and configured
+- [ ] Node.js 18+ with npm working
+- [ ] Maven 3.8+ in your PATH
+- [ ] Docker and Docker Compose running
+- [ ] mkcert installed with certificates generated
+- [ ] Git configured with your credentials
+- [ ] Required ports available (check with `netstat` or `lsof`)
+- [ ] Environment variables set in your shell profile
 
-### Firewall Rules
-
-For production deployments:
-
-```bash
-# Allow inbound HTTP/HTTPS
-ufw allow 80/tcp
-ufw allow 443/tcp
-
-# Allow agent connections
-ufw allow 8080/tcp
-
-# Internal service communication (restrict to internal network)
-ufw allow from 10.0.0.0/8 to any port 27017
-ufw allow from 10.0.0.0/8 to any port 9042
-ufw allow from 10.0.0.0/8 to any port 6379
-```
-
-## Verification Commands
-
-Run these commands to verify your environment:
-
-### Java Environment
-```bash
-java --version
-# Expected: openjdk 21.x.x
-
-mvn --version
-# Expected: Apache Maven 3.8.x
-```
-
-### Node.js Environment
-```bash
-node --version
-# Expected: v18.x.x or higher
-
-npm --version
-# Expected: 9.x.x or higher
-```
-
-### Rust Environment (for client development)
-```bash
-rustc --version
-# Expected: rustc 1.70.x or higher
-
-cargo --version
-# Expected: cargo 1.70.x or higher
-```
-
-### Docker Environment
-```bash
-docker --version
-# Expected: Docker version 20.10.x
-
-docker-compose --version
-# Expected: docker-compose version 2.x.x
-```
-
-## Security Considerations
-
-### SSL/TLS Certificates
-- Development: Self-signed certificates are acceptable
-- Production: Use valid SSL certificates from a trusted CA
-- Let's Encrypt recommended for cost-effective SSL
-
-### API Keys and Secrets
-- Store sensitive values in environment variables
-- Use secrets management in production (HashiCorp Vault, AWS Secrets Manager)
-- Rotate keys regularly
-
-### Network Security
-- Enable firewall on all systems
-- Use VPN for remote access to infrastructure
-- Implement network segmentation for production
-
-## Ready to Proceed?
-
-Once you've verified all prerequisites are met:
-
-1. ✅ System requirements satisfied
-2. ✅ Required software installed
-3. ✅ Environment variables configured
-4. ✅ Network ports available
-5. ✅ Accounts and API keys obtained
-
-You're ready to proceed with the [Quick Start Guide](./quick-start.md)!
-
-## Troubleshooting Prerequisites
+## Troubleshooting
 
 ### Common Issues
 
-**Java Version Mismatch**
+**Java Version Conflicts:**
 ```bash
-# Check multiple Java installations
-update-alternatives --config java
+# Check all Java versions
+/usr/libexec/java_home -V  # macOS
+update-alternatives --list java  # Linux
 
-# Set JAVA_HOME explicitly
-export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+# Set specific version
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)  # macOS
 ```
 
-**Node.js Version Issues**
+**Docker Permission Issues (Linux):**
 ```bash
-# Install Node Version Manager (nvm)
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
-
-# Install and use Node.js 18
-nvm install 18
-nvm use 18
+sudo usermod -aG docker $USER
+# Log out and back in, or:
+newgrp docker
 ```
 
-**Port Conflicts**
+**Port Conflicts:**
 ```bash
 # Check what's using a port
-lsof -i :8080
-
-# Kill process using port
-sudo kill -9 <PID>
+lsof -i :8080  # macOS/Linux
+netstat -ano | findstr :8080  # Windows
 ```
 
-For additional help, join our [OpenMSP Slack community](https://join.slack.com/t/openmsp/shared_invite/zt-36bl7mx0h-3~U2nFH6nqHqoTPXMaHEHA) where our community can assist with environment setup questions.
+**mkcert Certificate Issues:**
+```bash
+# Reinstall mkcert certificates
+mkcert -uninstall
+mkcert -install
+```
+
+## Next Steps
+
+Once you've verified all prerequisites are met, you're ready to proceed to the [Quick Start Guide](quick-start.md) to get OpenFrame running locally in under 5 minutes.
+
+Need help? Join our [OpenMSP Slack community](https://join.slack.com/t/openmsp/shared_invite/zt-36bl7mx0h-3~U2nFH6nqHqoTPXMaHEHA) where our team and community members provide support.

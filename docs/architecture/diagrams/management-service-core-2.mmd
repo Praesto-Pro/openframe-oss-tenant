@@ -1,6 +1,8 @@
 flowchart TD
-    Request["POST /v1/tools/{id}"] --> SaveTool["Save Integrated Tool"]
-    SaveTool --> Persist["IntegratedToolService.save"]
-    Persist --> DebeziumUpdate["DebeziumService.createOrUpdate"]
-    DebeziumUpdate --> Hooks["Execute Post Save Hooks"]
-    Hooks --> Response["Return Success"]
+    AppReady["ApplicationReadyEvent"] --> CheckEnabled{"Pinot Enabled?"}
+    CheckEnabled -->|"No"| Stop["Skip Deployment"]
+    CheckEnabled -->|"Yes"| LoadResources["Load JSON Schema & Table Config"]
+    LoadResources --> Resolve["Resolve Environment Placeholders"]
+    Resolve --> DeploySchema["POST /schemas"]
+    DeploySchema --> DeployTable["PUT or POST /tables"]
+    DeployTable --> Success["Deployment Complete"]

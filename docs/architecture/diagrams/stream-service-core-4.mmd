@@ -1,4 +1,4 @@
 flowchart TD
-    DebeziumMsg["DeserializedDebeziumMessage"] --> Transform["transform()"]
-    Transform --> UnifiedEvent["UnifiedLogEvent"]
-    UnifiedEvent --> Save["CassandraRepository.save()"]
+    GenericHandler["GenericMessageHandler"] --> DebeziumHandler["DebeziumMessageHandler"]
+    DebeziumHandler --> CassandraHandler["DebeziumCassandraMessageHandler"]
+    DebeziumHandler --> KafkaHandler["DebeziumKafkaMessageHandler"]

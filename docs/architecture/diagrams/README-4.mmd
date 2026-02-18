@@ -1,5 +1,9 @@
-flowchart TD
-    Browser --> AuthServer
-    AuthServer --> Mongo
-    AuthServer --> TenantKeyService["Tenant Key Service"]
-    TenantKeyService --> RSA["Per-Tenant RSA Keys"]
+flowchart LR
+    GatewayApp["Gateway App"] --> ApiApp["API App"]
+    GatewayApp --> ExternalApiApp["External API App"]
+    GatewayApp --> AuthApp["Authorization Server App"]
+    
+    ApiApp --> Mongo
+    StreamApp["Stream App"] --> Kafka
+    ManagementApp["Management App"] --> Pinot
+    ClientApp["Client App"] --> Kafka

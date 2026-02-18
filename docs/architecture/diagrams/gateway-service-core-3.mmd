@@ -1,6 +1,6 @@
 flowchart TD
-    Request["Incoming Request"] --> AddAuth["AddAuthorizationHeaderFilter"]
-    AddAuth --> JwtResolver["JWT Issuer Resolver"]
-    JwtResolver --> AuthManager["Reactive Authentication Manager"]
-    AuthManager --> RoleCheck["Path-based Role Check"]
-    RoleCheck --> Controller["Downstream Route"]
+    ExternalRequest["/external-api/** Request"] --> CheckKey["Check X-API-Key"]
+    CheckKey --> Validate["ApiKeyValidationService"]
+    Validate --> RateCheck["RateLimitService.isAllowed"]
+    RateCheck -->|"Allowed"| Forward["Forward to External API Service"]
+    RateCheck -->|"Exceeded"| Reject["429 Too Many Requests"]

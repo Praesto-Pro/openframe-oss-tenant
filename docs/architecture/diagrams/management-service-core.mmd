@@ -1,11 +1,15 @@
 flowchart TD
-    ManagementApp["Management Application"] --> MgmtCore["Management Service Core"]
+    Management["Management Service Core"]
+    Mongo["MongoDB"]
+    Redis["Redis"]
+    NATS["NATS JetStream"]
+    Pinot["Pinot Controller"]
+    Debezium["Debezium Connect"]
+    ClientAgents["Client Agents"]
 
-    MgmtCore --> Mongo["Data Access Mongo"]
-    MgmtCore --> Kafka["Data Access Kafka"]
-    MgmtCore --> Nats["NATS Streams"]
-    MgmtCore --> Debezium["Debezium Connectors"]
-
-    MgmtCore --> StreamCore["Stream Service Core"]
-    MgmtCore --> ClientCore["Client Service Core"]
-    MgmtCore --> ApiCore["API Service Core"]
+    Management -->|"reads/writes"| Mongo
+    Management -->|"distributed locks"| Redis
+    Management -->|"creates streams"| NATS
+    Management -->|"deploys schema & tables"| Pinot
+    Management -->|"creates connectors"| Debezium
+    Management -->|"publishes updates"| ClientAgents

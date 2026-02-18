@@ -1,329 +1,383 @@
 # First Steps with OpenFrame
 
-Welcome to OpenFrame! Now that you have the platform running, this guide walks you through the first 5 essential steps to get you productive with your new MSP platform.
+Welcome to OpenFrame! Now that you have the platform running, let's explore the essential features and configurations that will help you get the most out of your MSP automation platform.
 
-## Overview
+> **Prerequisites**: Complete the [Quick Start Guide](quick-start.md) to have OpenFrame running locally.
 
-After completing the quick start, you should have OpenFrame running locally. These first steps will help you:
+[![OpenFrame: 5-Minute MSP Platform Walkthrough - Cut Vendor Costs & Automate Ops](https://img.youtube.com/vi/er-z6IUnAps/maxresdefault.jpg)](https://www.youtube.com/watch?v=er-z6IUnAps)
 
-1. Complete initial tenant setup
-2. Configure your first organization
-3. Add users and set permissions
-4. Install and register your first agent
-5. Explore AI-powered features
+## First 5 Things to Do
 
-Let's dive in!
+### 1. Complete Organization Setup
 
----
+Your organization is the foundation of your OpenFrame tenant.
 
-## Step 1: Complete Initial Tenant Setup
-
-### Access Your OpenFrame Instance
-
-Navigate to [http://localhost:3000](http://localhost:3000) in your browser. You'll see the OpenFrame welcome screen.
-
-### Create Your Admin Account
-
-1. **Click "Sign Up"** to create your first tenant
-2. **Fill in your details**:
-   - Email address (will be your admin login)
-   - Password (minimum 8 characters)
-   - Organization name
-   - Your full name
-
-3. **Complete registration** - you'll be automatically logged in
-
-### Verify Your Setup
-
-After registration, you should see:
-- Clean dashboard interface
-- Navigation sidebar with main sections
-- Welcome tour popup (optional)
-
-> 💡 **Tip**: The first user created becomes the tenant administrator with full permissions.
-
----
-
-## Step 2: Configure Your Organization
-
-### Access Organization Settings
-
-1. Navigate to **Organizations** in the sidebar
-2. Click on your organization (created during registration)
-3. Select **Edit** or use the **General Information** tab
-
-### Complete Organization Profile
-
-Fill in essential organization details:
+**Navigate to Settings → Company & Users:**
 
 ```text
-Organization Information:
-├── Basic Details
-│   ├── Name: Your MSP Company Name
-│   ├── Description: Brief company description
-│   └── Industry: Managed Service Provider
-│
-├── Contact Information
-│   ├── Primary Email: support@your-company.com
-│   ├── Phone: +1-555-123-4567
-│   └── Website: https://your-company.com
-│
-└── Address Information
-    ├── Street: 123 Business Ave
-    ├── City: Your City
-    ├── State/Province: Your State
-    └── Country: Your Country
+Organization Details:
+- Name: Your MSP Company Name
+- Industry: Managed Service Provider
+- Size: Select appropriate size
+- Contact Information: Primary business details
+- Address: Complete business address
 ```
 
-### Set Organization Preferences
+**Why This Matters:**
+- Enables proper tenant isolation
+- Required for client reporting and branding
+- Foundation for compliance and audit trails
 
-Configure key settings:
-- **Time Zone**: Set your primary operating timezone
-- **Default Language**: Choose interface language
-- **Security Policies**: Review and adjust as needed
+### 2. Configure Authentication & SSO
 
----
+Set up secure authentication for your team and clients.
 
-## Step 3: Add Users and Configure Permissions
+**Navigate to Settings → SSO Configuration:**
 
-### Invite Additional Users
-
-1. Go to **Settings** → **Company and Users**
-2. Click **Add Users** or **Invite User**
-3. **Enter user details**:
-   - Email address
-   - Full name
-   - Role assignment
-
-### Understanding User Roles
-
-OpenFrame includes these built-in roles:
-
-| Role | Permissions | Best For |
-|------|-------------|----------|
-| **Administrator** | Full system access | IT directors, MSP owners |
-| **Technician** | Device management, support tools | Field technicians, support staff |
-| **Manager** | User management, reporting | Team leads, service managers |
-| **Viewer** | Read-only access to reports | Executives, auditors |
-
-### Set Up Your Team
-
-Create accounts for key team members:
-```bash
-# Example team structure:
-Admin User (you) → Full access
-Lead Technician → Technician role  
-Service Manager → Manager role
-Junior Tech → Technician role (limited)
+#### Enable Google SSO
+```text
+1. Click "Configure Google SSO"
+2. Enter your Google OAuth2 credentials:
+   - Client ID: from Google Cloud Console
+   - Client Secret: from Google Cloud Console
+   - Authorized domains: your-domain.com
+3. Test the configuration
+4. Enable for your organization
 ```
 
-### Configure SSO (Optional)
-
-If your organization uses single sign-on:
-
-1. Navigate to **Settings** → **SSO Configuration**
-2. Choose your provider:
-   - **Azure Active Directory**
-   - **Google Workspace**
-   - **Microsoft 365**
-3. Follow the setup wizard with your SSO credentials
-
----
-
-## Step 4: Install and Register Your First Agent
-
-### Download the OpenFrame Agent
-
-The OpenFrame agent connects your devices to the platform for management and monitoring.
-
-1. **Go to Devices** → **Add New Device**
-2. **Select your platform**:
-   - Windows (PowerShell installer)
-   - macOS (PKG installer)
-   - Linux (bash script)
-
-3. **Copy the installation command** - it includes your unique registration secret
-
-### Install on Windows
-
-```powershell
-# Run PowerShell as Administrator
-Invoke-WebRequest -Uri "https://your-openframe-url/agent/install.ps1" -OutFile "install.ps1"
-.\install.ps1 -Secret "your-registration-secret"
+#### Enable Microsoft SSO
+```text
+1. Click "Configure Microsoft SSO" 
+2. Enter your Azure AD credentials:
+   - Application ID: from Azure portal
+   - Client Secret: from Azure portal
+   - Tenant ID: your Azure tenant
+3. Test the configuration
+4. Enable for your organization
 ```
 
-### Install on macOS/Linux
+**Security Best Practices:**
+- Always use SSO for team members
+- Enable multi-factor authentication
+- Review and audit user access regularly
 
-```bash
-# Run with sudo privileges
-curl -fsSL https://your-openframe-url/agent/install.sh | sudo bash -s -- --secret your-registration-secret
+### 3. Set Up Your First Integrated Tool
+
+Connect OpenFrame to your existing MSP tools for unified management.
+
+**Navigate to Settings → Architecture:**
+
+#### Connect Fleet MDM
+```text
+1. Click "Configure Fleet MDM"
+2. Enter connection details:
+   - Server URL: https://your-fleet.domain.com
+   - API Token: your-fleet-api-token
+   - Organization: fleet-org-name
+3. Test connection
+4. Enable synchronization
 ```
 
-### Verify Agent Registration
+#### Connect Tactical RMM  
+```text
+1. Click "Configure Tactical RMM"
+2. Enter connection details:
+   - Server URL: https://your-tactical-rmm.com
+   - API Key: your-tactical-api-key
+   - Client: tactical-client-name
+3. Test connection
+4. Enable agent management
+```
 
-After installation:
-1. **Check the Devices page** - your device should appear within 2-3 minutes
-2. **Verify connection status** - look for green "Connected" status
-3. **Review device information** - OS, hardware specs, installed software
+#### Connect MeshCentral
+```text
+1. Click "Configure MeshCentral"
+2. Enter connection details:
+   - Server URL: https://your-meshcentral.com
+   - Username: admin-username
+   - Password: admin-password
+   - Device Group: target-device-group
+3. Test connection
+4. Enable remote access features
+```
 
-### Agent Capabilities
+### 4. Add Your First Devices
 
-Once connected, your agent provides:
-- **Real-time monitoring**: CPU, memory, disk usage
-- **Remote access**: Desktop and shell access
-- **File management**: Browse and transfer files
-- **Software management**: Install, update, remove applications
-- **Security monitoring**: Compliance checking and vulnerability scanning
+Get devices connected and monitored through OpenFrame.
 
----
+**Navigate to Devices → Add Device:**
 
-## Step 5: Explore AI-Powered Features
+#### Option A: Automatic Agent Installation
+```text
+1. Select "Automatic Installation"
+2. Choose your device OS (Windows/macOS/Linux)
+3. Download the OpenFrame agent
+4. Run installation on target device
+5. Device will auto-register and appear in dashboard
+```
 
-### Meet Mingo - Your AI Assistant
+#### Option B: Manual Registration
+```text
+1. Select "Manual Registration"
+2. Copy the registration secret
+3. Install OpenFrame client manually:
 
-OpenFrame includes Mingo, an AI assistant designed specifically for MSP operations.
+# On the target device
+wget https://releases.openframe.ai/latest/openframe-client
+chmod +x openframe-client
+./openframe-client register --secret=<registration-secret>
+```
 
-[![OpenFrame v0.4.4: Mingo AI Assistant with Enterprise Guardrails](https://img.youtube.com/vi/mAi4qqA8b00/maxresdefault.jpg)](https://www.youtube.com/watch?v=mAi4qqA8b00)
+#### Verify Device Connection
+```text
+1. Check Devices dashboard for new entry
+2. Verify "Connected" status
+3. Review device details and installed agents
+4. Test remote connectivity
+```
 
-### Access Mingo
+### 5. Configure AI Assistant (Mingo)
 
-1. **Click the Mingo icon** in the sidebar (robot icon)
-2. **Or use the chat bubble** in the bottom-right corner
-3. **Start with a simple question** like "Show me my device overview"
+Enable AI-powered automation and support.
 
-### Example Mingo Interactions
+**Navigate to Settings → AI Settings:**
 
-Try these commands to explore Mingo's capabilities:
+#### Configure Anthropic Integration
+```text
+1. Enter Anthropic API credentials:
+   - API Key: your-anthropic-api-key
+   - Model: claude-3-sonnet (recommended)
+   - Max Tokens: 4096
+2. Test AI connectivity
+3. Enable for technician workflows
+```
+
+#### Set AI Policies
+```text
+1. Define automation policies:
+   - Auto-resolve common issues: Enabled
+   - Require approval for critical actions: Enabled
+   - Client self-service level: Basic
+2. Configure escalation rules
+3. Set working hours and availability
+```
+
+#### Test AI Chat
+```text
+1. Navigate to Mingo Chat interface
+2. Ask: "Show me device health summary"
+3. Verify AI responds with current device status
+4. Try: "Generate maintenance report for last 30 days"
+```
+
+## Essential Configurations
+
+### API Key Management
+
+Create API keys for external integrations and automation.
+
+**Navigate to Settings → API Keys:**
 
 ```text
-"Show me all offline devices"
-→ Mingo displays devices that haven't checked in recently
-
-"Create a maintenance report for Device-001"  
-→ Generates comprehensive device status report
-
-"What security alerts need attention?"
-→ Summarizes critical security findings
-
-"Help me troubleshoot slow performance on Device-002"
-→ Provides step-by-step diagnostic guidance
+1. Click "Create API Key"
+2. Configure:
+   - Name: External Integration Key
+   - Permissions: Read/Write as needed
+   - Expiration: Set appropriate expiry
+   - IP Restrictions: Limit to specific IPs
+3. Save the key securely (shown only once)
+4. Test with sample API call
 ```
 
-### Configure AI Policies
+**Test API Key:**
+```bash
+curl -H "X-API-Key: your-api-key" \
+  https://localhost:8081/api/v1/devices \
+  -k
+```
 
-Set up enterprise guardrails for AI usage:
+### User & Team Management
 
-1. **Go to Settings** → **AI Settings**
-2. **Configure approval workflows**:
-   - Require approval for system changes
-   - Set spending limits for AI operations
-   - Define restricted actions
-3. **Set data privacy controls**:
-   - Restrict sensitive data access
-   - Configure data retention policies
-   - Enable audit logging
+Add team members and configure permissions.
+
+**Navigate to Settings → Company & Users:**
+
+```text
+1. Click "Invite Users"
+2. Enter email addresses
+3. Select roles:
+   - Admin: Full platform access
+   - Technician: Device management and monitoring
+   - Viewer: Read-only access
+4. Send invitations
+5. Users receive email to complete registration
+```
+
+### Notification Settings
+
+Configure alerts and notification channels.
+
+**Navigate to Settings (Notification preferences):**
+
+```text
+1. Email Notifications:
+   - Device alerts: Enabled
+   - System maintenance: Enabled
+   - Security events: Enabled
+2. Slack Integration (optional):
+   - Webhook URL: your-slack-webhook
+   - Channels: #alerts, #maintenance
+3. Test notification delivery
+```
+
+## Exploring Key Features
+
+### Device Management Dashboard
+
+**Navigate to Devices:**
+- **Device Grid View**: Visual overview of all connected devices
+- **Device Status**: Real-time health and connectivity status  
+- **Remote Access**: Direct MeshCentral integration for support
+- **Agent Management**: Install, update, and configure agents
+- **Compliance Monitoring**: Track security and policy compliance
+
+### Log Analysis & Monitoring
+
+**Navigate to Logs:**
+- **Unified Log View**: Aggregated logs from all integrated tools
+- **Search & Filter**: Advanced query capabilities across data sources
+- **Real-time Streaming**: Live log updates and monitoring
+- **Alert Configuration**: Set up automated alert rules
+- **Audit Trails**: Comprehensive activity logging
 
 ### AI-Powered Automation
 
-Explore automation capabilities:
-- **Smart Alerting**: AI prioritizes and categorizes alerts
-- **Predictive Maintenance**: Proactive issue identification
-- **Automated Responses**: Configure AI to handle routine tasks
-- **Report Generation**: Intelligent reporting and insights
+**Navigate to Mingo (AI Chat):**
+- **Conversational Interface**: Natural language queries and commands
+- **Automated Workflows**: AI-driven task automation
+- **Predictive Analytics**: Proactive issue identification
+- **Knowledge Base**: AI-powered documentation and solutions
+- **Approval Workflows**: Human-in-the-loop for critical operations
 
----
+### Organization & Client Management
 
-## Quick Configuration Checklist
+**Navigate to Organizations:**
+- **Multi-Tenant Management**: Separate client environments
+- **Contact Management**: Track client contacts and relationships
+- **Service Configuration**: Per-client service settings
+- **Billing Integration**: Foundation for billing and reporting
+- **Custom Branding**: Per-client interface customization
 
-Use this checklist to ensure you've covered the basics:
+## Common Configuration Patterns
 
-### ✅ Initial Setup
-- [ ] Admin account created and verified
-- [ ] Organization profile completed
-- [ ] Basic preferences configured
+### Development Environment
 
-### ✅ User Management  
-- [ ] Key team members invited
-- [ ] Roles and permissions assigned
-- [ ] SSO configured (if applicable)
+For development and testing:
 
-### ✅ Device Management
-- [ ] First agent installed and registered
-- [ ] Device appears in dashboard
-- [ ] Agent connectivity verified
+```bash
+# Set development profile
+export SPRING_PROFILES_ACTIVE=development,local
 
-### ✅ AI Configuration
-- [ ] Mingo assistant tested
-- [ ] AI policies configured
-- [ ] Automation preferences set
+# Enable debug logging
+export LOGGING_LEVEL_COM_OPENFRAME=DEBUG
 
-### ✅ Basic Security
-- [ ] User permissions reviewed
-- [ ] API access configured
-- [ ] Security policies enabled
+# Disable SSL verification for local testing
+export OPENFRAME_SSL_VERIFY=false
+```
 
----
+### Production Preparation
 
-## Common Initial Questions
+When preparing for production:
 
-### "How do I add more devices?"
+```bash
+# Use production profiles
+export SPRING_PROFILES_ACTIVE=production
 
-Go to **Devices** → **Add Device**, select the platform, and follow the installation instructions. Each device gets a unique registration secret.
+# Configure external databases
+export MONGODB_URI=mongodb://prod-cluster:27017/openframe
+export REDIS_URL=redis://prod-redis:6379
 
-### "What if an agent won't connect?"
+# Set up proper SSL certificates
+export SSL_CERT_PATH=/etc/ssl/certs/openframe.crt
+export SSL_KEY_PATH=/etc/ssl/private/openframe.key
+```
 
-Check:
-1. Network connectivity to OpenFrame server
-2. Firewall rules allowing outbound connections
-3. Registration secret is correct
-4. Agent service is running
+### Security Hardening
 
-### "How do I configure remote access?"
+Essential security configurations:
 
-Once an agent is connected:
-1. Click the device in your device list
-2. Select **Remote Desktop** or **Remote Shell**
-3. Authenticate if prompted
-4. Access is granted through the browser
+```text
+1. API Gateway Settings:
+   - Enable rate limiting
+   - Configure CORS policies
+   - Set up API key rotation schedule
 
-### "Can I import existing device lists?"
+2. Database Security:
+   - Enable authentication on all databases
+   - Use encrypted connections (SSL/TLS)
+   - Regular security updates
 
-Yes! Use the **Tools** → **Import/Export** feature to bulk import device information and generate installation scripts.
+3. Network Security:
+   - Firewall rules for service ports
+   - VPN access for administrative functions
+   - Network segmentation for services
+```
 
----
+## Troubleshooting Quick Checks
+
+### Service Health
+```bash
+# Check all service health endpoints
+curl -k https://localhost:8081/actuator/health | jq .
+curl -k https://localhost:8080/actuator/health | jq .
+curl -k https://localhost:8082/actuator/health | jq .
+```
+
+### Database Connectivity
+```bash
+# Test MongoDB connection
+docker exec openframe-mongodb mongosh --eval "db.runCommand('ping')"
+
+# Test Redis connection  
+docker exec openframe-redis redis-cli ping
+
+# Check Kafka topics
+docker exec openframe-kafka kafka-topics --bootstrap-server localhost:9092 --list
+```
+
+### Log Analysis
+```bash
+# Check service logs for errors
+docker-compose logs -f api-service | grep ERROR
+docker-compose logs -f gateway-service | grep ERROR
+
+# Monitor real-time logs
+tail -f logs/openframe-api.log
+tail -f logs/openframe-gateway.log
+```
 
 ## What's Next?
 
-Now that you've completed the first steps:
+Now that you've completed the essential setup, you're ready to dive deeper:
 
-### Immediate Actions
-- **Install agents** on your critical devices
-- **Set up monitoring alerts** for key systems
-- **Create device groups** for easier management
-- **Configure backup and maintenance schedules**
+### Development Path
+- **[Development Environment Setup](../development/setup/environment.md)** - Configure your IDE and development workflow
+- **[Local Development Guide](../development/setup/local-development.md)** - Advanced development setup and debugging
 
-### Advanced Configuration
-- **Set up integrations** with existing tools
-- **Configure automated scripts** and policies
-- **Create custom dashboards** and reports
-- **Implement compliance monitoring**
+### Architecture Understanding  
+- **[System Architecture](../development/architecture/README.md)** - Deep dive into OpenFrame's design
+- **[Security Overview](../development/security/README.md)** - Understand security patterns and best practices
 
-### Explore Documentation
-- **Development guides** for custom integrations
-- **Security best practices** for production deployment  
-- **Advanced AI configuration** for complex workflows
-- **API documentation** for custom development
+### Advanced Topics
+- **[Contributing Guidelines](../development/contributing/guidelines.md)** - Learn how to contribute to OpenFrame
+- **[Testing Overview](../development/testing/README.md)** - Testing strategies and practices
 
-## Getting Help
+## Get Help & Connect
 
-### Community Support
-- **OpenMSP Slack**: [Join our community](https://join.slack.com/t/openmsp/shared_invite/zt-36bl7mx0h-3~U2nFH6nqHqoTPXMaHEHA) for real-time help
-- **Documentation**: Browse guides for specific features
-- **Video Tutorials**: Check out our YouTube channel for walkthroughs
+- 💬 **Community**: [OpenMSP Slack Community](https://join.slack.com/t/openmsp/shared_invite/zt-36bl7mx0h-3~U2nFH6nqHqoTPXMaHEHA)
+- 📚 **Documentation**: [OpenFrame Docs](https://www.flamingo.run/openframe)
+- 🌐 **Website**: [Flamingo Platform](https://flamingo.run)
 
-### Professional Services
-- **Implementation Support**: Get help with complex deployments
-- **Custom Development**: Extend OpenFrame for unique requirements
-- **Training Services**: Team training and certification programs
+**You're now ready to harness the full power of OpenFrame for your MSP operations!** 🚀
 
-Welcome to the OpenFrame community! You're now ready to transform your MSP operations with intelligent automation and unified platform management. 🚀
+The platform is designed to grow with you - from simple device monitoring to complex automated workflows, OpenFrame provides the foundation for modern MSP success.

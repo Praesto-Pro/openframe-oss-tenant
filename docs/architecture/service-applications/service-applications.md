@@ -1,384 +1,365 @@
 # Service Applications
 
-The **Service Applications** module represents the deployable runtime layer of the OpenFrame platform. It aggregates and boots all core backend services that power API access, authentication, streaming, management, client connectivity, and configuration.
+The **Service Applications** module represents the runnable Spring Boot services that compose the OpenFrame platform. Each application is a thin bootstrap layer that wires together domain libraries (API, Authorization, Data, Gateway, Stream, etc.) into independently deployable microservices.
 
-Each application in this module is a standalone Spring Boot service that composes functionality from lower-level modules such as API libraries, data access layers, security components, Kafka integrations, and core business services.
+This module does not implement business logic directly. Instead, it:
 
-At a high level, Service Applications:
-
-- Provide executable entry points for all backend services
-- Wire together domain modules via `@ComponentScan`
-- Enable service discovery, messaging, and security
-- Define the runtime boundaries of the platform
+- Defines service entry points (`main` classes)
+- Configures component scanning boundaries
+- Enables infrastructure capabilities (Kafka, Discovery, Security)
+- Assembles shared libraries into cohesive runtime services
 
 ---
 
 ## Architectural Overview
 
-The Service Applications layer sits at the top of the backend stack and orchestrates multiple domain modules.
+The Service Applications module brings together multiple core libraries into a distributed microservice architecture.
 
 ```mermaid
 flowchart TD
-    Gateway["Gateway Application"] --> API["API Application"]
-    Gateway --> ExternalAPI["External API Application"]
-    Gateway --> AuthZ["Authorization Server Application"]
+    Gateway["Gateway Service"] --> API["API Service"]
+    Gateway --> ExternalAPI["External API Service"]
+    Gateway --> Auth["Authorization Server"]
 
-    API --> Mongo["Mongo Data Access"]
-    API --> Kafka["Kafka Integration"]
-    API --> Core["Core Services"]
+    API --> Mongo[("MongoDB")]
+    API --> Kafka[("Kafka")]
 
-    ExternalAPI --> API
-
-    AuthZ --> Mongo
-    AuthZ --> Security["Security Core"]
-
-    Client["Client Application"] --> Kafka
-    Stream["Stream Application"] --> Kafka
+    Stream["Stream Service"] --> Kafka
     Stream --> Mongo
 
-    Management["Management Application"] --> Mongo
-    Config["Config Server Application"]
+    Management["Management Service"] --> Mongo
+    Management --> Kafka
+
+    Client["Client Service"] --> Kafka
+    Client --> Mongo
+
+    Auth --> Mongo
+    Auth --> Redis[("Redis")]
+
+    Config["Config Server"] --> Services["All Services"]
 ```
 
-Each box represents a deployable service with its own Spring Boot lifecycle.
+### Key Characteristics
+
+- **Microservice-based**: Each application runs independently.
+- **Shared Core Libraries**: Business logic lives in reusable core modules.
+- **Event-Driven Backbone**: Kafka connects services asynchronously.
+- **Multi-Tenant Ready**: Authorization and data layers support tenant isolation.
+- **Gateway-First Access**: All external traffic flows through the Gateway.
 
 ---
 
-# Applications in the Module
+# Service Inventory
 
-The Service Applications module contains the following runtime services:
-
-1. API Application  
-2. Authorization Server Application  
-3. Gateway Application  
-4. External API Application  
-5. Client Application  
-6. Management Application  
-7. Stream Application  
-8. Config Server Application  
-
-Each application is described below.
+Below are the services defined in this module and their responsibilities.
 
 ---
 
-## API Application
+## API Service
 
-**Entry point:** `ApiApplication`
+**Main Class:** `ApiApplication`
 
-The API Application is the primary backend service responsible for exposing core platform APIs for devices, users, organizations, logs, tools, and events.
+### Purpose
 
-### Responsibilities
+The API Service provides the primary internal application API for the OpenFrame platform. It exposes REST and GraphQL endpoints for managing:
 
-- Expose REST and/or GraphQL endpoints
-- Coordinate business logic services
-- Integrate with Mongo repositories
-- Publish and consume Kafka events
-- Interact with notification and core services
+- Devices
+- Organizations
+- Users
+- Tools
+- Logs and events
+- Invitations and SSO configuration
 
 ### Component Scan Scope
 
-```java
-@ComponentScan(basePackages = {
-    "com.openframe.api",
-    "com.openframe.data",
-    "com.openframe.core",
-    "com.openframe.notification",
-    "com.openframe.kafka"
-})
+```text
+com.openframe.api
+com.openframe.data
+com.openframe.core
+com.openframe.notification
+com.openframe.kafka
 ```
-
-This shows the API service composes:
-
-- API controllers and data fetchers
-- Data access layer (Mongo)
-- Core business logic
-- Kafka integration
-- Notification mechanisms
-
-### Runtime Flow
-
-```mermaid
-flowchart LR
-    Client["Frontend or Gateway"] --> Controller["API Controller"]
-    Controller --> Service["Business Service"]
-    Service --> Repository["Mongo Repository"]
-    Service --> KafkaProducer["Kafka Producer"]
-    Repository --> MongoDB[("MongoDB")]
-    KafkaProducer --> Kafka[("Kafka Cluster")]
-```
-
----
-
-## Authorization Server Application
-
-**Entry point:** `OpenFrameAuthorizationServerApplication`
-
-This service acts as the OAuth2 / OIDC authorization server for the platform.
 
 ### Responsibilities
 
-- User authentication (username/password, SSO)
-- Tenant-aware identity handling
-- OAuth2 token issuance
-- Client registration
-- Password reset and invitation flows
+- Business API orchestration
+- DTO mapping and validation
+- Device and event querying
+- Coordination with data and messaging layers
+
+---
+
+## Authorization Server
+
+**Main Class:** `OpenFrameAuthorizationServerApplication`
+
+### Purpose
+
+The Authorization Server implements OAuth2 and OpenID Connect flows, multi-tenant authentication, SSO integration, and token issuance.
 
 ### Key Features
 
-- `@EnableDiscoveryClient` for service discovery
-- Multi-tenant context resolution
-- RSA key generation and token signing
-- Mongo-backed authorization storage
+- OAuth2 Authorization Server
+- Dynamic client registration
+- Tenant-aware authentication
+- SSO (Google, Microsoft) support
+- Token persistence
 
 ### Component Scan Scope
 
-```java
-@ComponentScan(basePackages = {
-    "com.openframe.authz",
-    "com.openframe.core",
-    "com.openframe.data",
-    "com.openframe.notification"
-})
+```text
+com.openframe.authz
+com.openframe.core
+com.openframe.data
+com.openframe.notification
 ```
 
-### Authentication Flow
+### Infrastructure
+
+- MongoDB for client and token storage
+- Redis for caching (if enabled)
+- Spring Security OAuth2 stack
+
+---
+
+## Gateway Service
+
+**Main Class:** `GatewayApplication`
+
+### Purpose
+
+The Gateway Service is the entry point for frontend and external clients. It handles:
+
+- Routing
+- Authentication enforcement
+- API key validation
+- JWT validation
+- CORS
+- WebSocket proxying
+
+### Component Scan Scope
+
+```text
+com.openframe.gateway
+com.openframe.core
+com.openframe.data
+com.openframe.security
+```
+
+### Responsibilities
+
+- Request filtering and enrichment
+- Authorization header injection
+- Tenant-aware issuer resolution
+- Rate limiting
+
+---
+
+## External API Service
+
+**Main Class:** `ExternalApiApplication`
+
+### Purpose
+
+The External API Service exposes public-facing REST endpoints for integrations and third-party tools.
+
+It reuses core API logic but provides:
+
+- OpenAPI documentation
+- Integration-specific DTOs
+- Filter and pagination criteria models
+
+### Component Scan Scope
+
+```text
+com.openframe.external
+com.openframe.data
+com.openframe.core
+com.openframe.api
+com.openframe.kafka
+```
+
+---
+
+## Management Service
+
+**Main Class:** `ManagementApplication`
+
+### Purpose
+
+The Management Service handles administrative and infrastructure-level tasks.
+
+### Responsibilities
+
+- Release version management
+- Integrated tool lifecycle
+- Agent registration secret initialization
+- NATS/Kafka stream initialization
+- Pinot configuration
+- Scheduled tasks (via ShedLock)
+
+### Component Scan Scope
+
+```text
+com.openframe.management
+com.openframe.data
+com.openframe.core
+```
+
+Note: Cassandra health indicators are excluded from component scanning.
+
+---
+
+## Stream Service
+
+**Main Class:** `StreamApplication`
+
+### Purpose
+
+The Stream Service processes asynchronous events using Kafka and Kafka Streams.
+
+### Features
+
+- Kafka listeners
+- Debezium change stream handlers
+- Event enrichment
+- Tool data enrichment
+- Activity aggregation
+
+### Annotations
+
+- `@EnableKafka`
+
+### Component Scan Scope
+
+```text
+com.openframe.stream
+com.openframe.data
+com.openframe.kafka.producer
+```
+
+---
+
+## Client Service
+
+**Main Class:** `ClientApplication`
+
+### Purpose
+
+The Client Service manages agent and tool client interactions.
+
+### Responsibilities
+
+- Agent registration
+- Agent authentication
+- File exchange with tool agents
+- Client connection listeners
+- Machine heartbeat handling
+
+### Component Scan Scope
+
+```text
+com.openframe.data
+com.openframe.client
+com.openframe.core
+com.openframe.security
+com.openframe.kafka.producer
+```
+
+Note: Cassandra health indicators are excluded from scanning.
+
+---
+
+## Config Server
+
+**Main Class:** `ConfigServerApplication`
+
+### Purpose
+
+The Config Server centralizes configuration for all services.
+
+### Responsibilities
+
+- Environment configuration distribution
+- Centralized property management
+- Profile-specific configuration handling
+
+This service enables consistent configuration across distributed deployments.
+
+---
+
+# Service Interaction Flow
+
+The following diagram illustrates a typical request lifecycle.
 
 ```mermaid
 sequenceDiagram
-    participant Browser
-    participant Gateway
-    participant AuthServer as "Authorization Server"
-    participant MongoDB
+    participant UI as Frontend
+    participant GW as Gateway
+    participant AUTH as Authorization
+    participant API as API Service
+    participant DB as MongoDB
 
-    Browser->>Gateway: Request protected resource
-    Gateway->>AuthServer: Redirect to login
-    Browser->>AuthServer: Submit credentials
-    AuthServer->>MongoDB: Validate user
-    AuthServer->>Browser: Issue OAuth token
-    Browser->>Gateway: Call API with token
+    UI->>GW: HTTP Request
+    GW->>AUTH: Validate JWT
+    AUTH->>GW: Token valid
+    GW->>API: Forward request
+    API->>DB: Query data
+    DB->>API: Return result
+    API->>GW: JSON response
+    GW->>UI: HTTP 200 OK
 ```
 
 ---
 
-## Gateway Application
+# Deployment Model
 
-**Entry point:** `GatewayApplication`
+Each service in the Service Applications module:
 
-The Gateway Application acts as the unified ingress point for client requests.
+- Is packaged as an independent Spring Boot application
+- Can be deployed as a container
+- Registers independently (if discovery enabled)
+- Connects to shared infrastructure (Kafka, MongoDB, Redis)
 
-### Responsibilities
+This enables:
 
-- Route external requests to internal services
-- Validate JWT tokens
-- Apply API key authentication
-- Enforce CORS and security policies
-- Add authorization headers for downstream services
-
-### Component Scan Scope
-
-```java
-@ComponentScan(basePackages = {
-    "com.openframe.gateway",
-    "com.openframe.core",
-    "com.openframe.data",
-    "com.openframe.security"
-})
-```
-
-### Request Routing Model
-
-```mermaid
-flowchart TD
-    Client["Client"] --> Gateway["Gateway"]
-    Gateway --> API["API Service"]
-    Gateway --> ExternalAPI["External API Service"]
-    Gateway --> AuthZ["Authorization Server"]
-```
-
-The Gateway centralizes cross-cutting concerns such as authentication and request transformation.
-
----
-
-## External API Application
-
-**Entry point:** `ExternalApiApplication`
-
-This service exposes a partner-facing or integration-facing API surface.
-
-### Responsibilities
-
-- Provide stable external REST endpoints
-- Proxy or transform internal API calls
-- Integrate with Kafka and data layer
-- Publish OpenAPI documentation
-
-### Component Scan Scope
-
-```java
-@ComponentScan(basePackages = {
-    "com.openframe.external",
-    "com.openframe.data",
-    "com.openframe.core",
-    "com.openframe.api",
-    "com.openframe.kafka"
-})
-```
-
-The inclusion of `com.openframe.api` allows reuse of shared business logic.
-
----
-
-## Client Application
-
-**Entry point:** `ClientApplication`
-
-The Client Application manages machine agents and platform-connected clients.
-
-### Responsibilities
-
-- Agent authentication
-- Agent registration
-- Heartbeat handling
-- Tool connection tracking
-- Kafka event publishing
-
-### Notable Configuration
-
-Excludes `CassandraHealthIndicator`, demonstrating selective component filtering.
-
-```java
-excludeFilters = {
-    @ComponentScan.Filter(
-        type = FilterType.ASSIGNABLE_TYPE,
-        classes = CassandraHealthIndicator.class
-    )
-}
-```
-
-### Interaction Model
-
-```mermaid
-flowchart LR
-    Agent["Installed Agent"] --> ClientService["Client Application"]
-    ClientService --> Kafka["Kafka"]
-    ClientService --> Mongo["MongoDB"]
-```
-
----
-
-## Management Application
-
-**Entry point:** `ManagementApplication`
-
-This service provides administrative and lifecycle management capabilities.
-
-### Responsibilities
-
-- Integrated tool management
-- Release version management
-- Agent secret initialization
-- Debezium connector setup
-- Client configuration initialization
-
-### Component Scope
-
-- Management controllers
-- Data access layer
-- Core utilities
-
-It acts as the operational control plane for the platform.
-
----
-
-## Stream Application
-
-**Entry point:** `StreamApplication`
-
-The Stream Application handles real-time event processing and enrichment.
-
-### Responsibilities
-
-- Consume Kafka topics
-- Process Debezium CDC events
-- Enrich activity data
-- Transform integrated tool events
-
-### Configuration Highlights
-
-- `@EnableKafka` enables Kafka listener support
-- Integrates with data layer for persistence and lookup
-
-### Streaming Flow
-
-```mermaid
-flowchart TD
-    Kafka[("Kafka Topics")] --> Listener["Kafka Listener"]
-    Listener --> Handler["Debezium Handler"]
-    Handler --> Enrichment["Activity Enrichment Service"]
-    Enrichment --> Mongo[("MongoDB")]
-```
-
----
-
-## Config Server Application
-
-**Entry point:** `ConfigServerApplication`
-
-The Config Server Application provides centralized configuration management.
-
-### Responsibilities
-
-- Centralized configuration distribution
-- Environment-specific property resolution
-- Bootstrapping configuration for all services
-
-All other Service Applications rely on it for environment configuration and service-level properties.
-
----
-
-# Cross-Service Communication Patterns
-
-The Service Applications interact through:
-
-1. **HTTP (via Gateway)**  
-2. **Kafka (event-driven communication)**  
-3. **MongoDB (shared persistence layer, tenant-scoped)**  
-4. **OAuth2 / JWT (security propagation)**  
-
-```mermaid
-flowchart LR
-    User["User"] --> Gateway
-    Gateway --> API
-    API --> Kafka
-    Kafka --> Stream
-    API --> Mongo
-    AuthZ --> Mongo
-    Client --> Kafka
-    Management --> Mongo
-```
+- Horizontal scaling per service
+- Independent deployments
+- Fault isolation
+- Environment-specific scaling strategies
 
 ---
 
 # Design Principles
 
-The Service Applications module reflects several architectural principles:
+1. **Thin Application Layer**  
+   Application classes only bootstrap and wire components.
 
-- **Modular composition**: Each service assembles lower-level modules via component scanning.
-- **Separation of concerns**: API, auth, gateway, streaming, and management are isolated.
-- **Event-driven integration**: Kafka enables decoupled inter-service communication.
-- **Tenant awareness**: Services integrate with tenant-aware data and security layers.
-- **Scalability**: Each application can be independently scaled and deployed.
+2. **Library-Centric Architecture**  
+   Business logic lives in reusable core modules.
+
+3. **Separation of Concerns**  
+   - Gateway → Routing & Security
+   - Authorization → Identity & OAuth
+   - API → Business Logic
+   - Stream → Event Processing
+   - Management → Administrative Operations
+   - Client → Agent Integration
+
+4. **Event-Driven Extensibility**  
+   Kafka enables cross-service communication without tight coupling.
 
 ---
 
-# Conclusion
+# Summary
 
-The **Service Applications** module defines the operational backbone of the OpenFrame platform. It transforms reusable domain modules into independently deployable services, enabling:
+The **Service Applications** module is the executable layer of OpenFrame. It composes reusable libraries into independent, scalable microservices that together provide:
 
-- Secure multi-tenant authentication
-- Unified API access
-- Real-time streaming and enrichment
-- Agent and integration management
-- Centralized configuration control
+- Secure authentication and authorization
+- Multi-tenant API access
+- Event-driven processing
+- Agent and tool integration
+- Administrative management
+- Public and private API exposure
 
-Together, these applications form the runtime foundation upon which the Flamingo / OpenFrame ecosystem operates.
+This modular architecture ensures scalability, maintainability, and flexibility across the OpenFrame platform.

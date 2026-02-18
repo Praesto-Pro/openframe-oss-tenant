@@ -1,6 +1,11 @@
-flowchart LR
-    User["User"] --> LoginPage["/login"]
-    LoginPage --> FormLogin["Form Authentication"]
-    LoginPage --> OAuthLogin["OAuth2 Login (Google/Microsoft)"]
-    OAuthLogin --> OidcUserService["Custom OIDC User Service"]
-    OidcUserService --> AutoProvision["Auto Provision Logic"]
+sequenceDiagram
+    participant User
+    participant AuthServer
+    participant SSO
+    participant UserService
+
+    User->>AuthServer: GET /invitations/accept/sso
+    AuthServer->>SSO: Redirect to provider
+    SSO-->>AuthServer: OIDC callback
+    AuthServer->>UserService: registerByInvitation()
+    AuthServer-->>User: Redirect to tenant

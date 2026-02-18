@@ -1,9 +1,10 @@
-flowchart LR
-    Client["Browser / Agent / External Client"] --> Gateway["Gateway Service Core"]
+flowchart TD
+    UI["Frontend UI"] -->|"HTTPS"| Gateway["Gateway Service Core"]
+    Agents["Agents"] -->|"HTTPS / WS"| Gateway
+    ExternalClients["External API Clients"] -->|"X-API-Key"| Gateway
 
-    Gateway --> Authz["Authorization Server Core"]
-    Gateway --> ApiService["API Service Core"]
-    Gateway --> ExternalApi["External API Service Core"]
-    Gateway --> ClientService["Client Service Core"]
-
-    Gateway --> Mongo["Data Access Mongo"]
+    Gateway -->|"JWT Auth"| Authz["Authorization Server Core"]
+    Gateway -->|"/api/**"| ApiService["API Service Core"]
+    Gateway -->|"/clients/**"| ClientService["Client Service Core"]
+    Gateway -->|"/external-api/**"| ExternalApi["External API Service Core"]
+    Gateway -->|"WS / NATS"| StreamLayer["Stream / Messaging Layer"]

@@ -1,5 +1,15 @@
-flowchart LR
-    Client --> Gateway
-    Gateway --> JwtValidation["JWT Validation"]
-    Gateway --> ApiKeyFilter["API Key Filter"]
-    Gateway --> Route["Route to Services"]
+sequenceDiagram
+    participant Tool
+    participant Kafka
+    participant Stream
+    participant Cassandra
+    participant API
+    participant Frontend
+    
+    Tool->>Kafka: Debezium CDC Event
+    Kafka->>Stream: Consume Event
+    Stream->>Stream: Normalize & Enrich
+    Stream->>Cassandra: Persist UnifiedLogEvent
+    Frontend->>API: Query Logs
+    API->>Cassandra: Fetch Logs
+    API-->>Frontend: Paginated Log Results
