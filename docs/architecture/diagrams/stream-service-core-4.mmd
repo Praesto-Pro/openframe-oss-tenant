@@ -1,4 +1,5 @@
 flowchart TD
-    GenericHandler["GenericMessageHandler"] --> DebeziumHandler["DebeziumMessageHandler"]
-    DebeziumHandler --> CassandraHandler["DebeziumCassandraMessageHandler"]
-    DebeziumHandler --> KafkaHandler["DebeziumKafkaMessageHandler"]
+    Enriched["Enriched Debezium Message"] --> KafkaHandler["DebeziumKafkaMessageHandler"]
+    Enriched --> CassandraHandler["DebeziumCassandraMessageHandler"]
+    KafkaHandler --> KafkaOut["Outbound Topic"]
+    CassandraHandler --> CassandraDB["Cassandra UnifiedLogEvent"]

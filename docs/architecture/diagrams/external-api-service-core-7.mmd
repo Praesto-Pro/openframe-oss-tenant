@@ -1,12 +1,12 @@
-sequenceDiagram
-    participant Client
-    participant Gateway
-    participant ExternalApi
-    participant Service
+flowchart TD
+    Client --> IntegrationController
+    IntegrationController --> RestProxyService
 
-    Client->>Gateway: Request with X-API-Key
-    Gateway->>Gateway: Validate API Key
-    Gateway->>ExternalApi: Forward request
-    ExternalApi->>Service: Delegate business logic
-    Service-->>ExternalApi: Return data
-    ExternalApi-->>Client: JSON response
+    RestProxyService --> ToolRepository["IntegratedToolRepository"]
+    RestProxyService --> ToolUrlService
+    RestProxyService --> ProxyUrlResolver
+
+    RestProxyService --> HttpClient["Apache HttpClient"]
+    HttpClient --> ExternalToolAPI["Integrated Tool API"]
+    ExternalToolAPI --> HttpClient
+    HttpClient --> RestProxyService

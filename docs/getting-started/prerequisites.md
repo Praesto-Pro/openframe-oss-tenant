@@ -1,269 +1,300 @@
 # Prerequisites
 
-Before setting up OpenFrame, ensure your development environment meets these requirements. This guide covers all necessary software, system requirements, and preparatory steps.
+Before setting up OpenFrame OSS Tenant, ensure your development environment meets the following requirements. This guide covers all necessary software, system requirements, and access needs.
 
 ## System Requirements
 
-### Minimum Hardware Specifications
+### Minimum Hardware Requirements
 
-| Component | Requirement | Recommended |
-|-----------|------------|-------------|
-| **CPU** | 4 cores | 8+ cores |
-| **RAM** | 8 GB | 16+ GB |
-| **Storage** | 50 GB available | 100+ GB SSD |
+| Resource | Minimum | Recommended |
+|----------|---------|-------------|
+| **RAM** | 8 GB | 16 GB |
+| **CPU** | 4 cores | 8 cores |
+| **Storage** | 20 GB free | 50 GB free |
 | **Network** | Stable internet connection | High-speed broadband |
 
 ### Supported Operating Systems
 
-| OS | Version | Notes |
-|----|---------|-------|
-| **macOS** | 12.0+ (Monterey) | Primary development platform |
-| **Linux** | Ubuntu 20.04+, Debian 11+, RHEL 8+ | Server deployment ready |
-| **Windows** | Windows 10/11 with WSL2 | Development with Linux subsystem |
+- **Linux** (Ubuntu 20.04+, CentOS 8+, or equivalent)
+- **macOS** (10.15 Catalina or later)
+- **Windows** (Windows 10 or Windows Server 2019+)
 
 ## Required Software
 
-### Core Development Tools
+### 1. Java Development Kit (JDK) 21
 
-| Tool | Version | Purpose | Installation |
-|------|---------|---------|-------------|
-| **Java JDK** | 21+ | Backend services runtime | [OpenJDK 21](https://openjdk.org/) or [Oracle JDK 21](https://www.oracle.com/java/technologies/downloads/) |
-| **Node.js** | 18+ | AI integration and tooling | [Node.js Downloads](https://nodejs.org/) |
-| **Maven** | 3.8+ | Java build tool | [Maven Installation](https://maven.apache.org/install.html) |
-| **Git** | 2.30+ | Version control | [Git Downloads](https://git-scm.com/downloads) |
+OpenFrame OSS Tenant requires **Java 21** as specified in the Spring Boot 3.3.0 configuration.
 
-### Container & Orchestration (Required)
-
-| Tool | Version | Purpose | Installation |
-|------|---------|---------|-------------|
-| **Docker** | 24.0+ | Container runtime | [Docker Desktop](https://www.docker.com/products/docker-desktop/) |
-| **Docker Compose** | 2.20+ | Multi-container orchestration | Included with Docker Desktop |
-
-### SSL/TLS Development Certificates
-
-| Tool | Purpose | Installation |
-|------|---------|-------------|
-| **mkcert** | Local HTTPS development | macOS: `brew install mkcert`<br>Ubuntu: `sudo apt install mkcert libnss3-tools`<br>Manual: [mkcert releases](https://github.com/FiloSottile/mkcert/releases) |
-
-### Database & Messaging Infrastructure
-
-The following services will be run via Docker Compose (no local installation required):
-
-| Service | Version | Purpose |
-|---------|---------|---------|
-| **MongoDB** | 7.0+ | Primary database |
-| **Apache Kafka** | 3.6+ | Event streaming |
-| **Redis** | 7.0+ | Caching & sessions |
-| **Apache Cassandra** | 4.0+ | Time-series data |
-| **Apache Pinot** | 1.2+ | Analytics engine |
-| **NATS** | 2.10+ | Real-time messaging |
-
-## Development Environment Setup
-
-### 1. Verify Java Installation
+**Installation:**
 
 ```bash
-java --version
+# Ubuntu/Debian
+sudo apt update
+sudo apt install openjdk-21-jdk
+
+# macOS (using Homebrew)
+brew install openjdk@21
+
+# Windows (using Chocolatey)
+choco install openjdk21
 ```
 
-**Expected output:**
-```text
-openjdk 21.0.1 2023-10-17
-OpenJDK Runtime Environment (build 21.0.1+12-29)
-OpenJDK 64-Bit Server VM (build 21.0.1+12-29, mixed mode, sharing)
+**Verification:**
+```bash
+java -version
+javac -version
 ```
 
-### 2. Verify Node.js Installation
+Expected output should show Java 21.x.x.
 
+### 2. Apache Maven 3.6+
+
+Maven is required for building the Spring Boot services.
+
+**Installation:**
+
+```bash
+# Ubuntu/Debian
+sudo apt install maven
+
+# macOS (using Homebrew)
+brew install maven
+
+# Windows (using Chocolatey)
+choco install maven
+```
+
+**Verification:**
+```bash
+mvn -version
+```
+
+### 3. Node.js 18+ and npm/yarn
+
+Required for the frontend application and development tooling.
+
+**Installation:**
+
+```bash
+# Using Node Version Manager (recommended)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+nvm install 18
+nvm use 18
+
+# Or direct installation
+# Ubuntu/Debian
+sudo apt install nodejs npm
+
+# macOS (using Homebrew)
+brew install node
+
+# Windows (using Chocolatey)
+choco install nodejs
+```
+
+**Verification:**
 ```bash
 node --version
 npm --version
 ```
 
-**Expected output:**
-```text
-v18.18.0
-9.8.1
-```
+### 4. Rust (for Client Applications)
 
-### 3. Verify Maven Installation
-
-```bash
-mvn --version
-```
-
-**Expected output:**
-```text
-Apache Maven 3.9.5
-Maven home: /opt/maven
-Java version: 21.0.1, vendor: Eclipse Adoptium
-```
-
-### 4. Verify Docker Installation
-
-```bash
-docker --version
-docker-compose --version
-```
-
-**Expected output:**
-```text
-Docker version 24.0.6
-Docker Compose version v2.21.0
-```
-
-### 5. Set Up mkcert for HTTPS
-
-mkcert enables local HTTPS development without certificate warnings.
+The OpenFrame client applications are written in Rust and use Tauri for desktop apps.
 
 **Installation:**
 
 ```bash
-# macOS
-brew install mkcert
-mkcert -install
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source `$HOME`/.cargo/env
 
+# Add required targets
+rustup target add x86_64-pc-windows-msvc
+rustup target add aarch64-apple-darwin
+```
+
+**Verification:**
+```bash
+rustc --version
+cargo --version
+```
+
+### 5. Git
+
+Version control system for source code management.
+
+**Installation:**
+
+```bash
 # Ubuntu/Debian
-sudo apt update
-sudo apt install mkcert libnss3-tools
-mkcert -install
+sudo apt install git
 
-# Windows (via Chocolatey)
-choco install mkcert
-mkcert -install
+# macOS (using Homebrew)
+brew install git
+
+# Windows (using Chocolatey)
+choco install git
 ```
 
-**Verify installation:**
+**Verification:**
 ```bash
-mkcert -CAROOT
+git --version
 ```
 
-This should display the certificate authority root directory path.
+## Infrastructure Dependencies
 
-### 6. Configure Git (if not already done)
+The following services are required for a complete OpenFrame deployment:
 
-```bash
-git config --global user.name "Your Name"
-git config --global user.email "your.email@example.com"
-```
+### Database Systems
+
+| Service | Version | Purpose |
+|---------|---------|---------|
+| **MongoDB** | 5.0+ | Primary document database |
+| **Redis** | 6.0+ | Caching and distributed locking |
+| **Apache Cassandra** | 4.0+ | Time-series log storage |
+
+### Message Streaming & Processing
+
+| Service | Version | Purpose |
+|---------|---------|---------|
+| **Apache Kafka** | 3.6+ | Event streaming |
+| **NATS** | 2.9+ | Lightweight messaging |
+| **Apache Pinot** | 1.2+ | Real-time analytics |
+
+### Development Tools (Optional but Recommended)
+
+| Tool | Purpose |
+|------|---------|
+| **Docker** & **Docker Compose** | Containerized development |
+| **IntelliJ IDEA** or **VS Code** | IDE with Java/Rust support |
+| **Postman** or **curl** | API testing |
+| **MongoDB Compass** | Database visualization |
+| **Redis CLI** | Cache debugging |
 
 ## Environment Variables
 
-Set up these environment variables in your shell profile (`~/.bashrc`, `~/.zshrc`, or equivalent):
-
-### Required Variables
+Set up the following environment variables for development:
 
 ```bash
-# Java
-export JAVA_HOME="/path/to/java/21"
+# Java Configuration
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+export PATH=$JAVA_HOME/bin:$PATH
 
-# Maven (if not in PATH)
-export MAVEN_HOME="/path/to/maven"
-export PATH="$MAVEN_HOME/bin:$PATH"
+# Maven Configuration
+export M2_HOME=/usr/share/maven
+export PATH=$M2_HOME/bin:$PATH
 
-# OpenFrame Development
-export OPENFRAME_ENV="development"
-export OPENFRAME_PROFILE="local"
+# Node.js Configuration  
+export NODE_ENV=development
+
+# Rust Configuration
+export PATH=$HOME/.cargo/bin:$PATH
+
+# OpenFrame Configuration
+export OPENFRAME_ENV=local
+export OPENFRAME_LOG_LEVEL=DEBUG
 ```
 
-### Optional Variables
+Add these to your shell profile (`.bashrc`, `.zshrc`, etc.).
+
+## Access Requirements
+
+### Development Accounts (Optional)
+
+For full platform integration, you may need:
+
+- **Google Cloud Account** - For Google SSO integration
+- **Microsoft Azure Account** - For Microsoft SSO integration
+- **GitHub Account** - For source code access to additional repositories
+
+### Network Requirements
+
+Ensure your development environment can access:
+
+- **Port 8080-8090** - Spring Boot services
+- **Port 3000** - Frontend development server
+- **Port 27017** - MongoDB default port
+- **Port 6379** - Redis default port
+- **Port 9092** - Kafka default port
+- **Port 4222** - NATS default port
+
+## Verification Commands
+
+Run these commands to verify your setup:
 
 ```bash
-# Docker resource limits (adjust based on your system)
-export COMPOSE_DOCKER_CLI_BUILD=1
-export DOCKER_BUILDKIT=1
+# Java and Maven
+java -version && mvn -version
 
-# JVM options for development
-export MAVEN_OPTS="-Xmx2g -XX:+UseG1GC"
+# Node.js ecosystem
+node --version && npm --version
+
+# Rust ecosystem  
+rustc --version && cargo --version
+
+# Git
+git --version
+
+# Check required ports are available
+netstat -tuln | grep -E ':(8080|3000|27017|6379|9092|4222)'
 ```
 
-## Account Requirements
+## Development Environment Setup
 
-### OpenMSP Community Access
-- Join our Slack community: [OpenMSP Slack](https://join.slack.com/t/openmsp/shared_invite/zt-36bl7mx0h-3~U2nFH6nqHqoTPXMaHEHA)
-- No GitHub issues or discussions - all support happens in the community
+### IDE Configuration
 
-### External Service Accounts (Optional)
-For full functionality, you may want accounts for:
+**For IntelliJ IDEA:**
+1. Install plugins: Spring Boot, GraphQL, Rust
+2. Configure JDK 21 in Project Settings
+3. Enable annotation processing
+4. Set up code style (Google Java Style recommended)
 
-| Service | Purpose | Required Level |
-|---------|---------|----------------|
-| **Anthropic** | AI integration | API access |
-| **Google OAuth** | SSO authentication | OAuth2 app registration |
-| **Microsoft Azure** | Enterprise SSO | OAuth2 app registration |
+**For VS Code:**
+1. Install extensions:
+   - Java Extension Pack
+   - Spring Boot Extension Pack
+   - Rust Analyzer
+   - GraphQL
+   - Docker
 
-## Port Requirements
+### Shell Environment
 
-Ensure these ports are available on your development machine:
+Consider using these development tools:
 
-| Port | Service | Purpose |
-|------|---------|---------|
-| **8080** | API Service | REST/GraphQL API |
-| **8081** | Gateway Service | API Gateway |
-| **8082** | Authorization Server | OAuth2/OIDC |
-| **8083** | External API | Public API |
-| **8084** | Management Service | Admin operations |
-| **8085** | Stream Service | Event processing |
-| **8086** | Client Service | Agent communication |
-| **3000** | Frontend | Next.js development |
-| **5432** | PostgreSQL | Database (if using) |
-| **27017** | MongoDB | Primary database |
-| **6379** | Redis | Cache & sessions |
-| **9092** | Kafka | Event streaming |
-| **9042** | Cassandra | Time-series data |
-| **8123** | Pinot Controller | Analytics |
-| **4222** | NATS | Real-time messaging |
-
-## Verification Checklist
-
-Before proceeding to the Quick Start guide, verify you have:
-
-- [ ] Java JDK 21+ installed and configured
-- [ ] Node.js 18+ with npm working
-- [ ] Maven 3.8+ in your PATH
-- [ ] Docker and Docker Compose running
-- [ ] mkcert installed with certificates generated
-- [ ] Git configured with your credentials
-- [ ] Required ports available (check with `netstat` or `lsof`)
-- [ ] Environment variables set in your shell profile
-
-## Troubleshooting
-
-### Common Issues
-
-**Java Version Conflicts:**
 ```bash
-# Check all Java versions
-/usr/libexec/java_home -V  # macOS
-update-alternatives --list java  # Linux
+# Oh My Zsh for enhanced shell experience
+sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 
-# Set specific version
-export JAVA_HOME=$(/usr/libexec/java_home -v 21)  # macOS
+# Useful aliases
+echo 'alias ll="ls -la"' >> ~/.zshrc
+echo 'alias openframe-build="mvn clean install -DskipTests"' >> ~/.zshrc
+echo 'alias openframe-test="mvn test"' >> ~/.zshrc
 ```
 
-**Docker Permission Issues (Linux):**
-```bash
-sudo usermod -aG docker $USER
-# Log out and back in, or:
-newgrp docker
-```
+## Troubleshooting Common Issues
 
-**Port Conflicts:**
-```bash
-# Check what's using a port
-lsof -i :8080  # macOS/Linux
-netstat -ano | findstr :8080  # Windows
-```
+### Java Issues
+- **Problem:** `JAVA_HOME` not set
+- **Solution:** Export `JAVA_HOME` pointing to your Java 21 installation
 
-**mkcert Certificate Issues:**
-```bash
-# Reinstall mkcert certificates
-mkcert -uninstall
-mkcert -install
-```
+### Maven Issues  
+- **Problem:** Maven cannot find dependencies
+- **Solution:** Run `mvn clean install` from the root directory
+
+### Node.js Issues
+- **Problem:** Permission errors with npm
+- **Solution:** Use Node Version Manager (nvm) or configure npm prefix
+
+### Port Conflicts
+- **Problem:** Ports already in use
+- **Solution:** Stop conflicting services or change port configurations
 
 ## Next Steps
 
-Once you've verified all prerequisites are met, you're ready to proceed to the [Quick Start Guide](quick-start.md) to get OpenFrame running locally in under 5 minutes.
+Once your prerequisites are satisfied:
 
-Need help? Join our [OpenMSP Slack community](https://join.slack.com/t/openmsp/shared_invite/zt-36bl7mx0h-3~U2nFH6nqHqoTPXMaHEHA) where our team and community members provide support.
+1. **[Quick Start Guide](quick-start.md)** - Get the platform running locally
+2. **[Development Setup](../development/setup/environment.md)** - Configure your IDE and tools
+
+> **Having Issues?** Join the [OpenMSP Slack Community](https://join.slack.com/t/openmsp/shared_invite/zt-36bl7mx0h-3~U2nFH6nqHqoTPXMaHEHA) for help from the community.

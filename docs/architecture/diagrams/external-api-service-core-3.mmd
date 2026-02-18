@@ -1,6 +1,12 @@
 flowchart TD
-    Request["GET /api/v1/events"] --> Filter["EventFilterCriteria"]
-    Filter --> Map["EventMapper"]
-    Map --> Service["EventService.queryEvents()"]
-    Service --> MapResp["toEventsResponse()"]
-    MapResp --> Return["200 OK"]
+    Client -->|"GET /api/v1/devices"| DeviceController
+    DeviceController --> FilterCriteria["DeviceFilterCriteria"]
+    DeviceController --> Pagination["PaginationCriteria"]
+    DeviceController --> SortCriteria
+
+    DeviceController --> DeviceService
+    DeviceService --> MongoRepo["Device Repository"]
+    DeviceService --> TagService
+
+    DeviceController --> DeviceMapper
+    DeviceMapper --> DevicesResponse

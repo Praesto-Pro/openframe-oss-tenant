@@ -1,16 +1,37 @@
 # Quick Start Guide
 
-Get OpenFrame up and running locally in under 5 minutes! This guide provides the fastest path to a working OpenFrame development environment.
+Get OpenFrame OSS Tenant up and running in 5 minutes! This guide provides the essential steps to clone, build, and start the platform locally.
 
-> **Prerequisites**: Ensure you've completed the [Prerequisites Guide](prerequisites.md) before continuing.
+> **Before you start:** Ensure you have completed the [Prerequisites](prerequisites.md) setup.
 
-## TL;DR - One Command Setup
+## TL;DR - 5-Minute Setup
 
 ```bash
+# 1. Clone the repository
 git clone https://github.com/flamingo-stack/openframe-oss-tenant.git
 cd openframe-oss-tenant
-./setup-dev.sh
+
+# 2. Run the development setup script
+./clients/openframe-client/scripts/setup_dev_init_config.sh
+
+# 3. Build all services
+mvn clean install
+
+# 4. Start the config server first
+cd openframe/services/openframe-config
+mvn spring-boot:run &
+
+# 5. Start core services (in separate terminals)
+cd ../openframe-api && mvn spring-boot:run &
+cd ../openframe-authorization-server && mvn spring-boot:run &
+cd ../openframe-gateway && mvn spring-boot:run &
+
+# 6. Start the frontend
+cd ../openframe-frontend
+npm install && npm run dev
 ```
+
+Your OpenFrame instance will be available at `http://localhost:3000`!
 
 ## Step-by-Step Setup
 
@@ -21,284 +42,262 @@ git clone https://github.com/flamingo-stack/openframe-oss-tenant.git
 cd openframe-oss-tenant
 ```
 
-### 2. Start Infrastructure Services
+### 2. Initial Configuration
 
-Launch the required databases and messaging services:
-
-```bash
-docker-compose up -d mongodb kafka redis cassandra pinot nats
-```
-
-**Wait for services to be ready (~2-3 minutes):**
-```bash
-# Check service health
-docker-compose ps
-```
-
-### 3. Build the Platform
-
-Build all Spring Boot services and install dependencies:
+Run the development initialization script to set up your local configuration:
 
 ```bash
-# Build all services
-mvn clean compile -DskipTests
-
-# Install Node.js dependencies for AI integration
-npm install
-```
-
-### 4. Generate Development Certificates
-
-Create local HTTPS certificates for secure development:
-
-```bash
-# Generate certificates for localhost
-mkcert localhost 127.0.0.1 ::1
-
-# Move certificates to expected location
-mkdir -p config/certs
-mv localhost+2.pem config/certs/
-mv localhost+2-key.pem config/certs/
-```
-
-### 5. Initialize Development Configuration
-
-Set up initial configuration and secrets:
-
-```bash
-# Create development configuration
 ./clients/openframe-client/scripts/setup_dev_init_config.sh
 ```
 
-When prompted, enter a temporary access token (you can use `dev-token` for local development).
+This script will:
+- Create necessary configuration files
+- Set up development environment variables  
+- Initialize local development certificates
+- Configure database connections
 
-### 6. Start Core Services
+### 3. Build the Platform
 
-Launch the microservices in the correct order:
+Build all Spring Boot services and dependencies:
 
 ```bash
-# Start in separate terminals, or use a process manager like foreman
+# Build the entire platform
+mvn clean install
 
-# Terminal 1: Authorization Server (must start first)
-cd openframe/services/openframe-authorization-server
-mvn spring-boot:run
+# Or build without running tests for faster setup
+mvn clean install -DskipTests
+```
 
-# Terminal 2: API Service
-cd openframe/services/openframe-api
-mvn spring-boot:run
+Expected output:
+```text
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Summary for OpenFrame Platform:
+[INFO] ------------------------------------------------------------------------
+[INFO] OpenFrame Platform ................................. SUCCESS [  2.145 s]
+[INFO] openframe-config ................................... SUCCESS [ 15.432 s]
+[INFO] openframe-api ...................................... SUCCESS [ 23.567 s]
+[INFO] openframe-authorization-server ..................... SUCCESS [ 18.234 s]
+[INFO] openframe-gateway .................................. SUCCESS [ 16.789 s]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+```
 
-# Terminal 3: Gateway Service
-cd openframe/services/openframe-gateway
-mvn spring-boot:run
+### 4. Start Core Services
 
-# Terminal 4: Management Service
-cd openframe/services/openframe-management
-mvn spring-boot:run
+Start the services in the following order:
 
-# Terminal 5: Stream Service
-cd openframe/services/openframe-stream
-mvn spring-boot:run
+#### 4.1. Config Server (Start First)
 
-# Terminal 6: Client Service
-cd openframe/services/openframe-client
+```bash
+cd openframe/services/openframe-config
 mvn spring-boot:run
 ```
 
-### 7. Start the Frontend
+Wait for the config server to fully start (look for "Started ConfigServerApplication").
+
+#### 4.2. Authorization Server
+
+```bash
+# In a new terminal
+cd openframe/services/openframe-authorization-server
+mvn spring-boot:run
+```
+
+#### 4.3. API Service
+
+```bash
+# In a new terminal
+cd openframe/services/openframe-api
+mvn spring-boot:run
+```
+
+#### 4.4. Gateway Service
+
+```bash
+# In a new terminal
+cd openframe/services/openframe-gateway
+mvn spring-boot:run
+```
+
+### 5. Start the Frontend Application
 
 ```bash
 # In a new terminal
 cd openframe/services/openframe-frontend
+
+# Install dependencies
 npm install
+
+# Start the development server
 npm run dev
 ```
 
-## Verify Installation
+The frontend will be available at `http://localhost:3000`.
+
+## Service Startup Verification
 
 ### Check Service Health
 
-Visit these endpoints to verify services are running:
-
-| Service | URL | Expected Response |
-|---------|-----|-------------------|
-| **Gateway** | [https://localhost:8081/actuator/health](https://localhost:8081/actuator/health) | `{"status":"UP"}` |
-| **API Service** | [https://localhost:8080/actuator/health](https://localhost:8080/actuator/health) | `{"status":"UP"}` |
-| **Auth Server** | [https://localhost:8082/actuator/health](https://localhost:8082/actuator/health) | `{"status":"UP"}` |
-| **Frontend** | [https://localhost:3000](https://localhost:3000) | Login page |
-
-### Test API Access
+Verify each service is running properly:
 
 ```bash
-# Test GraphQL endpoint
-curl -X POST https://localhost:8081/graphql \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer dev-token" \
-  -d '{"query": "{ __schema { types { name } } }"}' \
-  -k
+# Config Server
+curl http://localhost:8888/actuator/health
+
+# Authorization Server  
+curl http://localhost:8081/actuator/health
+
+# API Service
+curl http://localhost:8080/actuator/health
+
+# Gateway Service
+curl http://localhost:8082/actuator/health
 ```
 
-### Test Database Connections
+Expected response for each:
+```json
+{"status":"UP"}
+```
+
+### Service Port Mapping
+
+| Service | Port | Health Check URL |
+|---------|------|------------------|
+| **Config Server** | 8888 | `http://localhost:8888/actuator/health` |
+| **Authorization Server** | 8081 | `http://localhost:8081/actuator/health` |
+| **API Service** | 8080 | `http://localhost:8080/actuator/health` |
+| **Gateway Service** | 8082 | `http://localhost:8082/actuator/health` |
+| **Frontend** | 3000 | `http://localhost:3000` |
+
+## First Login
+
+### Default Development Account
+
+For local development, the system creates a default tenant and user:
+
+- **Tenant:** `dev.openframe.local`
+- **Email:** *Use the account created during initialization*
+- **Password:** *Set during the setup script*
+
+### Access the Platform
+
+1. Open your browser to `http://localhost:3000`
+2. Click "Sign Up" or "Login"
+3. Use your development credentials
+4. Complete the initial tenant setup if prompted
+
+## Basic Platform Exploration
+
+### Dashboard Overview
+
+Once logged in, you'll see the main dashboard with:
+
+- **Device Overview** - Connected devices and agents
+- **Organization Management** - Multi-tenant organization setup
+- **Chat Interface** - Mingo AI assistant
+- **Logs & Events** - Real-time system activity
+
+### Key Features to Try
+
+1. **Device Management** - Add and manage devices
+2. **Organization Setup** - Configure your MSP organization
+3. **User Invitations** - Invite team members
+4. **API Keys** - Generate API keys for external integrations
+5. **SSO Configuration** - Set up Google/Microsoft authentication
+
+## Development Workflow
+
+### Making Code Changes
+
+1. **Backend Changes** - Restart the affected Spring Boot service
+2. **Frontend Changes** - Hot reload is enabled by default
+3. **Configuration Changes** - Restart the config server
+
+### Useful Development Commands
 
 ```bash
-# MongoDB
-docker exec -it openframe-mongodb mongosh --eval "db.runCommand('ping')"
+# Restart a specific service
+cd openframe/services/openframe-api
+mvn spring-boot:run
 
-# Redis
-docker exec -it openframe-redis redis-cli ping
+# Frontend development with hot reload
+cd openframe/services/openframe-frontend
+npm run dev
 
-# Kafka
-docker exec -it openframe-kafka kafka-topics --bootstrap-server localhost:9092 --list
+# Run tests
+mvn test
+
+# Clean and rebuild
+mvn clean install
 ```
 
-## Access the Platform
+## Troubleshooting
 
-### Main Application
-- **URL**: [https://localhost:3000](https://localhost:3000)
-- **Default Credentials**: Set up during first login
+### Common Issues
 
-### AI Chat Interface
-- **URL**: [https://localhost:3000/mingo](https://localhost:3000/mingo)
-- **Purpose**: AI-powered technical assistance
+**Issue: Config Server won't start**
+```bash
+# Check if port 8888 is in use
+lsof -i :8888
+# Kill any conflicting process
+kill -9 <PID>
+```
 
-### API Documentation  
-- **GraphQL Playground**: [https://localhost:8081/graphiql](https://localhost:8081/graphiql)
-- **REST API**: [https://localhost:8083/swagger-ui.html](https://localhost:8083/swagger-ui.html)
+**Issue: Database connection errors**
+```bash
+# Ensure MongoDB is running
+systemctl status mongod
+# Or start it
+systemctl start mongod
+```
+
+**Issue: Frontend won't start**
+```bash
+# Clear npm cache
+npm cache clean --force
+# Delete node_modules and reinstall
+rm -rf node_modules package-lock.json
+npm install
+```
+
+**Issue: Services fail with JWT errors**
+- Ensure the Authorization Server started successfully
+- Check that all services can reach the config server
+- Verify no port conflicts exist
+
+### Getting Help
+
+- **Logs:** Check console output from each service
+- **Health Endpoints:** Use the health check URLs above
+- **Community:** Join the [OpenMSP Slack](https://join.slack.com/t/openmsp/shared_invite/zt-36bl7mx0h-3~U2nFH6nqHqoTPXMaHEHA)
 
 ## Expected Output
 
 When everything is running correctly, you should see:
 
-```bash
-# Service logs showing successful startup
-2024-01-15 10:00:00.000  INFO [main] c.o.api.ApiApplication : Started ApiApplication in 45.123 seconds
-2024-01-15 10:00:00.000  INFO [main] c.o.gateway.GatewayApplication : Started GatewayApplication in 12.456 seconds
-2024-01-15 10:00:00.000  INFO [main] c.o.authz.OpenFrameAuthorizationServerApplication : Started OpenFrameAuthorizationServerApplication in 23.789 seconds
-
-# Frontend ready
-ready - started server on 0.0.0.0:3000, url: https://localhost:3000
-```
-
-## Quick Test Workflow
-
-### 1. Create Your First Organization
-
-1. Visit [https://localhost:3000](https://localhost:3000)
-2. Click "Sign Up" to create an account
-3. Complete organization setup
-4. Verify email (check console logs in development)
-
-### 2. Connect a Device
-
-1. Navigate to "Devices" in the sidebar
-2. Click "Add Device" 
-3. Follow the agent installation instructions
-4. Verify the device appears in your dashboard
-
-### 3. Try AI Chat
-
-1. Go to [https://localhost:3000/mingo](https://localhost:3000/mingo)
-2. Ask: "Show me my device status"
-3. Verify Mingo AI responds with device information
-
-## Common Issues & Solutions
-
-### Services Won't Start
-
-**Issue**: `Port already in use` errors
-```bash
-# Find and kill processes using required ports
-lsof -ti:8080,8081,8082 | xargs kill -9
-```
-
-**Issue**: Database connection failures
-```bash
-# Restart infrastructure services
-docker-compose restart mongodb redis kafka
-```
-
-### Certificate Errors
-
-**Issue**: SSL certificate warnings in browser
-```bash
-# Reinstall mkcert certificates
-mkcert -uninstall && mkcert -install
-# Regenerate localhost certificates
-mkcert localhost 127.0.0.1 ::1
-```
-
-### Build Failures
-
-**Issue**: Maven compilation errors
-```bash
-# Clean and rebuild
-mvn clean
-mvn compile -DskipTests -U
-```
-
-**Issue**: Node.js dependency issues
-```bash
-# Clear npm cache and reinstall
-npm cache clean --force
-rm -rf node_modules package-lock.json
-npm install
-```
-
-### Memory Issues
-
-**Issue**: OutOfMemoryError during startup
-```bash
-# Increase JVM memory for Maven
-export MAVEN_OPTS="-Xmx4g -XX:+UseG1GC"
-
-# Increase Docker memory limits
-# Docker Desktop -> Settings -> Resources -> Memory -> 8GB+
-```
-
-## Development Tips
-
-### Use Process Managers
-
-For easier development, use a process manager:
-
-```bash
-# Install foreman
-gem install foreman
-
-# Create Procfile
-cat > Procfile << EOF
-auth: cd openframe/services/openframe-authorization-server && mvn spring-boot:run
-api: cd openframe/services/openframe-api && mvn spring-boot:run
-gateway: cd openframe/services/openframe-gateway && mvn spring-boot:run
-management: cd openframe/services/openframe-management && mvn spring-boot:run
-stream: cd openframe/services/openframe-stream && mvn spring-boot:run
-client: cd openframe/services/openframe-client && mvn spring-boot:run
-frontend: cd openframe/services/openframe-frontend && npm run dev
-EOF
-
-# Start all services
-foreman start
-```
-
-### IDE Configuration
-
-For IntelliJ IDEA or VS Code:
-- Import as Maven multi-module project
-- Set Project SDK to Java 21
-- Enable annotation processing
-- Configure code style (Google Java Style)
+- ✅ Config server responding on port 8888
+- ✅ Authorization server responding on port 8081  
+- ✅ API service responding on port 8080
+- ✅ Gateway service responding on port 8082
+- ✅ Frontend accessible at `http://localhost:3000`
+- ✅ Successful login to the platform
+- ✅ Dashboard showing tenant information
 
 ## Next Steps
 
-Now that OpenFrame is running, explore these areas:
+Now that you have OpenFrame running locally:
 
-1. **[First Steps Guide](first-steps.md)** - Learn essential features and configurations
-2. **[Development Environment Setup](../development/setup/environment.md)** - Configure your IDE and development tools
-3. **[Architecture Overview](../development/architecture/README.md)** - Understand the system design
+1. **[First Steps Guide](first-steps.md)** - Explore the platform's key features
+2. **[Development Environment](../development/setup/environment.md)** - Set up your IDE for development
+3. **[Architecture Overview](../development/architecture/README.md)** - Understand the platform architecture
 
-## Need Help?
+## Performance Tips
 
-- 💬 **Community Support**: [OpenMSP Slack](https://join.slack.com/t/openmsp/shared_invite/zt-36bl7mx0h-3~U2nFH6nqHqoTPXMaHEHA)
-- 📖 **Documentation**: Continue with the [First Steps Guide](first-steps.md)
-- 🐛 **Issues**: Join the Slack community for troubleshooting
+- **Memory:** Increase JVM heap size if needed: `-Xmx2G`
+- **Startup Time:** Use `-Dspring.jpa.hibernate.ddl-auto=none` in production
+- **Development:** Use `mvn spring-boot:run` with `-Dspring-boot.run.jvmArguments="-Xdebug"`
 
-**Congratulations!** 🎉 You now have a fully functional OpenFrame development environment. Time to explore the platform and build amazing MSP solutions!
+---
+
+🎉 **Congratulations!** You now have a fully functional OpenFrame OSS Tenant platform running locally. Time to explore what it can do!

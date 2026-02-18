@@ -1,145 +1,367 @@
 # Development Environment Setup
 
-This guide will help you set up a complete OpenFrame development environment with all necessary tools, IDE configuration, and development optimizations.
+This guide will help you configure your development environment for working with OpenFrame OSS Tenant. We'll cover IDE setup, development tools, and environment configuration for optimal productivity.
 
-> **Prerequisites**: Ensure you've completed the [Prerequisites Guide](../../getting-started/prerequisites.md) and have OpenFrame running via the [Quick Start Guide](../../getting-started/quick-start.md).
+> **Prerequisites:** Ensure you've completed the [Prerequisites](../../getting-started/prerequisites.md) and [Quick Start](../../getting-started/quick-start.md) guides first.
 
-## IDE Setup & Configuration
+## IDE Recommendations
 
-### IntelliJ IDEA (Recommended)
+### IntelliJ IDEA (Recommended for Java Development)
 
-IntelliJ IDEA provides excellent support for Spring Boot, Maven, and Java development.
+IntelliJ IDEA Ultimate provides the best experience for Spring Boot development.
 
-#### Installation & Basic Setup
+#### Installation & Setup
 
-1. **Download IntelliJ IDEA Ultimate** (recommended) or Community Edition
-2. **Install Essential Plugins:**
-   ```text
-   - Spring Boot (usually included)
-   - Spring Security
-   - Maven Helper
-   - Rainbow Brackets
-   - SonarLint
-   - GitToolBox
-   - Docker
-   - Database Navigator
-   ```
+1. **Download IntelliJ IDEA Ultimate** from [JetBrains](https://www.jetbrains.com/idea/)
+2. **Import the project:**
+   - File → Open → Select `openframe-oss-tenant` directory
+   - Choose "Import as Maven project"
 
-3. **Configure Project SDK:**
-   ```text
-   File → Project Structure → Project Settings → Project
-   - Project SDK: Select Java 21
-   - Project language level: 21
-   - Project compiler output: ./target
-   ```
+#### Essential Plugins
 
-#### Import OpenFrame Project
-
-1. **Open IntelliJ IDEA**
-2. **Select "Open or Import"**
-3. **Navigate to your cloned openframe-oss-tenant directory**
-4. **Select the root `pom.xml` file**
-5. **Choose "Open as Project"**
-6. **Wait for Maven to import all modules** (this may take several minutes)
-
-#### Configure Maven Settings
+Install these plugins for optimal development:
 
 ```text
-File → Settings → Build, Execution, Deployment → Build Tools → Maven
-
-General:
-- Maven home path: /path/to/maven (or use bundled)
-- User settings file: ~/.m2/settings.xml
-- Local repository: ~/.m2/repository
-
-Importing:
-- Import Maven projects automatically: ✓
-- Automatically download sources: ✓
-- Automatically download documentation: ✓
-
-Running:
-- VM options for importer: -Xmx2048m
+✅ Spring Boot (bundled)
+✅ GraphQL (bundled) 
+✅ Docker
+✅ Database Navigator
+✅ Rainbow Brackets
+✅ SonarLint
+✅ GitToolBox
+✅ Key Promoter X
 ```
 
-#### Configure Code Style
+**To install plugins:**
+1. File → Settings → Plugins
+2. Search for each plugin and click Install
 
-1. **Download OpenFrame code style configuration:**
-   ```bash
-   # Download Google Java Style
-   curl -o ~/Downloads/intellij-java-google-style.xml \
-     https://raw.githubusercontent.com/google/styleguide/gh-pages/intellij-java-google-style.xml
-   ```
+#### Project Configuration
 
-2. **Import code style:**
-   ```text
-   File → Settings → Editor → Code Style
-   - Click gear icon → Import Scheme → IntelliJ IDEA code style XML
-   - Select the downloaded XML file
-   - Apply to Project
-   ```
+**1. Configure JDK:**
+- File → Project Structure → Project Settings → Project
+- Set Project SDK to Java 21
+- Set Project language level to "21 - Pattern matching for switch"
 
-#### Configure Spring Boot Support
+**2. Configure Maven:**
+- File → Settings → Build, Execution, Deployment → Build Tools → Maven
+- Set Maven home path to your Maven installation
+- Check "Import Maven projects automatically"
 
-```text
-File → Settings → Build, Execution, Deployment → Spring
+**3. Configure Code Style:**
+- File → Settings → Editor → Code Style → Java
+- Import Google Java Style Guide or use project-specific settings
 
-Spring Boot:
-- Enable Spring Boot support: ✓
-- Show run dashboard: ✓
+**4. Enable Annotation Processing:**
+- File → Settings → Build, Execution, Deployment → Compiler → Annotation Processors
+- Check "Enable annotation processing"
 
-Spring:
-- Enable Spring support: ✓
-- Show profiles in run configurations: ✓
+### Visual Studio Code (Alternative)
+
+VS Code is excellent for frontend development and provides good Java support.
+
+#### Essential Extensions
+
+```bash
+# Java development
+code --install-extension vscjava.vscode-java-pack
+code --install-extension pivotal.vscode-spring-boot
+code --install-extension vscjava.vscode-gradle
+
+# Frontend development
+code --install-extension ms-vscode.vscode-typescript-next
+code --install-extension bradlc.vscode-tailwindcss
+code --install-extension GraphQL.vscode-graphql
+
+# Rust development (for client apps)
+code --install-extension rust-lang.rust-analyzer
+code --install-extension tauri-apps.tauri-vscode
+
+# General productivity
+code --install-extension ms-vscode.vscode-docker
+code --install-extension ms-kubernetes-tools.vscode-kubernetes-tools
+code --install-extension GitLab.gitlab-workflow
 ```
 
-### Visual Studio Code
-
-VS Code provides a lightweight alternative with excellent Java and Spring Boot support.
-
-#### Required Extensions
-
-Install these extensions:
-
-```json
-{
-  "recommendations": [
-    "vscjava.vscode-java-pack",
-    "vscjava.vscode-spring-boot-dashboard",
-    "vscjava.vscode-spring-initializr",
-    "ms-vscode.vscode-docker",
-    "ms-mssql.mssql",
-    "mongodb.mongodb-vscode",
-    "redhat.vscode-yaml",
-    "esbenp.prettier-vscode",
-    "ms-vscode.vscode-json"
-  ]
-}
-```
-
-#### Workspace Configuration
+#### VS Code Configuration
 
 Create `.vscode/settings.json` in your project root:
 
 ```json
 {
-  "java.home": "/path/to/java-21",
-  "java.configuration.runtimes": [
-    {
-      "name": "JavaSE-21",
-      "path": "/path/to/java-21"
-    }
-  ],
-  "spring-boot.ls.logfile.on": true,
-  "java.compile.nullAnalysis.mode": "automatic",
-  "java.format.settings.url": "https://raw.githubusercontent.com/google/styleguide/gh-pages/eclipse-java-google-style.xml",
-  "editor.formatOnSave": true,
-  "editor.codeActionsOnSave": {
-    "source.organizeImports": true
+  "java.home": "/usr/lib/jvm/java-21-openjdk-amd64",
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.maven.downloadSources": true,
+  "java.format.settings.profile": "GoogleStyle",
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "tailwindCSS.includeLanguages": {
+    "typescript": "javascript",
+    "typescriptreact": "javascript"
+  },
+  "files.exclude": {
+    "**/target": true,
+    "**/node_modules": true,
+    "**/.git": true
   }
 }
 ```
 
-#### Launch Configurations
+## Development Tools Configuration
+
+### Maven Configuration
+
+Create or update `~/.m2/settings.xml`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 
+                              http://maven.apache.org/xsd/settings-1.0.0.xsd">
+  <localRepository>/path/to/your/.m2/repository</localRepository>
+  
+  <profiles>
+    <profile>
+      <id>openframe-development</id>
+      <properties>
+        <spring.profiles.active>development</spring.profiles.active>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+      </properties>
+    </profile>
+  </profiles>
+  
+  <activeProfiles>
+    <activeProfile>openframe-development</activeProfile>
+  </activeProfiles>
+</settings>
+```
+
+### Node.js Configuration
+
+Configure npm for the frontend development:
+
+```bash
+# Set up npm configuration
+npm config set save-exact true
+npm config set engine-strict true
+
+# Configure registry (if using private registry)
+npm config set registry https://registry.npmjs.org/
+
+# Set up global packages
+npm install -g @types/node typescript ts-node
+npm install -g yarn pnpm
+```
+
+### Git Configuration
+
+Set up Git hooks and configuration:
+
+```bash
+# Configure Git for the project
+git config user.name "Your Name"
+git config user.email "your.email@company.com"
+
+# Enable useful Git features
+git config --global pull.rebase true
+git config --global init.defaultBranch main
+git config --global core.autocrlf input
+```
+
+## Environment Variables
+
+### Development Profile
+
+Create `application-development.yml` in each service's `src/main/resources/`:
+
+```yaml
+spring:
+  profiles:
+    active: development
+    
+logging:
+  level:
+    com.openframe: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+    
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env,configprops
+        
+server:
+  port: ${SERVER_PORT:8080}
+```
+
+### Environment Variables File
+
+Create `.env` file in your project root:
+
+```bash
+# OpenFrame Configuration
+OPENFRAME_ENV=development
+OPENFRAME_LOG_LEVEL=DEBUG
+OPENFRAME_CONFIG_SERVER=http://localhost:8888
+
+# Database Configuration
+MONGODB_HOST=localhost
+MONGODB_PORT=27017
+MONGODB_DATABASE=openframe_dev
+
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_DATABASE=0
+
+# Kafka Configuration
+KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+KAFKA_SCHEMA_REGISTRY_URL=http://localhost:8081
+
+# NATS Configuration
+NATS_SERVER_URL=nats://localhost:4222
+
+# JWT Configuration
+JWT_ISSUER_URI=http://localhost:8081
+JWT_AUDIENCE=openframe-api
+
+# External APIs
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+MICROSOFT_CLIENT_ID=your-microsoft-client-id
+MICROSOFT_CLIENT_SECRET=your-microsoft-client-secret
+```
+
+Load these variables in your shell profile:
+
+```bash
+# Add to ~/.bashrc or ~/.zshrc
+if [ -f ~/projects/openframe-oss-tenant/.env ]; then
+    export $(grep -v '^#' ~/projects/openframe-oss-tenant/.env | xargs)
+fi
+```
+
+## Docker Development Environment
+
+### Docker Compose for Dependencies
+
+Create `docker-compose.dev.yml` for development dependencies:
+
+```yaml
+version: '3.8'
+services:
+  mongodb:
+    image: mongo:5.0
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    volumes:
+      - mongodb_data:/data/db
+  
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+  
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
+  
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  nats:
+    image: nats:2.9-alpine
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    command: ["--jetstream", "--http_port", "8222"]
+
+volumes:
+  mongodb_data:
+  redis_data:
+```
+
+Start development dependencies:
+
+```bash
+docker-compose -f docker-compose.dev.yml up -d
+```
+
+## Database Setup
+
+### MongoDB Development Database
+
+Connect and set up the development database:
+
+```bash
+# Connect to MongoDB
+mongosh mongodb://admin:password@localhost:27017
+
+# Create development database
+use openframe_dev
+
+# Create a development user
+db.createUser({
+  user: "openframe_dev",
+  pwd: "dev_password",
+  roles: ["readWrite"]
+})
+
+# Create initial collections and indexes (optional)
+db.tenants.createIndex({ "domain": 1 }, { unique: true })
+db.users.createIndex({ "email": 1, "tenantId": 1 }, { unique: true })
+```
+
+### Redis Development Configuration
+
+Test Redis connection:
+
+```bash
+# Connect to Redis
+redis-cli
+
+# Test basic commands
+SET test-key "Hello OpenFrame"
+GET test-key
+DEL test-key
+```
+
+## Debugging Configuration
+
+### IntelliJ IDEA Debug Configuration
+
+1. **Create Spring Boot run configuration:**
+   - Run → Edit Configurations → Add New → Spring Boot
+   - Name: "OpenFrame API Service"
+   - Main class: `com.openframe.api.ApiApplication`
+   - VM options: `-Dspring.profiles.active=development -Xdebug -Xmx2G`
+   - Program arguments: `--spring.config.location=classpath:application.yml,classpath:application-development.yml`
+
+2. **Create debug configuration:**
+   - Copy the run configuration
+   - Name: "OpenFrame API Service (Debug)"
+   - Enable "Debug mode"
+
+### VS Code Debug Configuration
 
 Create `.vscode/launch.json`:
 
@@ -149,479 +371,131 @@ Create `.vscode/launch.json`:
   "configurations": [
     {
       "type": "java",
-      "name": "API Service",
+      "name": "Debug OpenFrame API",
       "request": "launch",
       "mainClass": "com.openframe.api.ApiApplication",
       "projectName": "openframe-api",
-      "args": "",
-      "vmArgs": "-Dspring.profiles.active=development,local"
-    },
-    {
-      "type": "java",
-      "name": "Authorization Server",
-      "request": "launch", 
-      "mainClass": "com.openframe.authz.OpenFrameAuthorizationServerApplication",
-      "projectName": "openframe-authorization-server",
-      "vmArgs": "-Dspring.profiles.active=development,local"
-    },
-    {
-      "type": "java",
-      "name": "Gateway Service",
-      "request": "launch",
-      "mainClass": "com.openframe.gateway.GatewayApplication", 
-      "projectName": "openframe-gateway",
-      "vmArgs": "-Dspring.profiles.active=development,local"
+      "args": [],
+      "vmArgs": "-Dspring.profiles.active=development",
+      "env": {
+        "SPRING_PROFILES_ACTIVE": "development"
+      }
     }
   ]
 }
 ```
 
-## Development Environment Variables
+## Performance Optimization
 
-### Core Environment Variables
+### JVM Tuning for Development
 
-Add these to your shell profile (`~/.bashrc`, `~/.zshrc`, etc.):
-
-```bash
-# Java Development
-export JAVA_HOME="/path/to/java-21"
-export MAVEN_HOME="/path/to/maven"
-export PATH="$MAVEN_HOME/bin:$JAVA_HOME/bin:$PATH"
-
-# OpenFrame Development
-export OPENFRAME_ENV="development"
-export OPENFRAME_PROFILE="local"
-export SPRING_PROFILES_ACTIVE="development,local"
-
-# Development Optimizations
-export MAVEN_OPTS="-Xmx4g -XX:+UseG1GC -XX:+UseStringDeduplication"
-export JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8 -Duser.timezone=UTC"
-
-# Docker Development
-export COMPOSE_DOCKER_CLI_BUILD=1
-export DOCKER_BUILDKIT=1
-
-# Database URLs (for development)
-export MONGODB_URI="mongodb://localhost:27017/openframe-dev"
-export REDIS_URL="redis://localhost:6379"
-export KAFKA_BOOTSTRAP_SERVERS="localhost:9092"
-
-# Security (development only)
-export JWT_SIGNING_KEY="dev-signing-key-change-in-production"
-export ENCRYPTION_KEY="dev-encryption-key-32-chars-long"
-
-# API Keys (development)
-export ANTHROPIC_API_KEY="your-anthropic-api-key"
-export OPENAI_API_KEY="your-openai-api-key" 
-```
-
-### Service-Specific Variables
-
-Create environment files for each service:
-
-**`config/api-service.env`:**
-```bash
-SERVER_PORT=8080
-SPRING_DATASOURCE_URL=mongodb://localhost:27017/openframe
-KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-LOGGING_LEVEL_COM_OPENFRAME=DEBUG
-```
-
-**`config/gateway-service.env`:**
-```bash
-SERVER_PORT=8081
-SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://localhost:8082
-CORS_ALLOWED_ORIGINS=https://localhost:3000,https://localhost:8080
-RATE_LIMIT_ENABLED=false
-```
-
-**`config/authorization-server.env`:**
-```bash
-SERVER_PORT=8082
-SPRING_DATASOURCE_URL=mongodb://localhost:27017/openframe-auth
-REDIS_URL=redis://localhost:6379
-OAUTH2_CLIENTS_FRONTEND_CLIENT_ID=openframe-frontend
-```
-
-## Development Tools & Extensions
-
-### Database Tools
-
-#### MongoDB Compass (GUI)
-```bash
-# Install via package manager
-brew install --cask mongodb-compass  # macOS
-# Or download from https://www.mongodb.com/products/compass
-
-# Connection string for development:
-mongodb://localhost:27017
-```
-
-#### Redis Desktop Manager
-```bash
-# Install RedisInsight (free official tool)
-brew install --cask redisinsight  # macOS
-# Or download from https://redis.com/redis-enterprise/redis-insight/
-
-# Connection: localhost:6379
-```
-
-### API Development Tools
-
-#### Postman Collections
-
-Create a Postman workspace with OpenFrame collections:
-
-```json
-{
-  "info": {
-    "name": "OpenFrame Development",
-    "description": "API collections for OpenFrame development"
-  },
-  "variable": [
-    {
-      "key": "baseUrl",
-      "value": "https://localhost:8081"
-    },
-    {
-      "key": "authToken", 
-      "value": "{{bearerToken}}"
-    }
-  ]
-}
-```
-
-#### GraphQL Playground Access
-
-- **URL**: https://localhost:8081/graphiql
-- **Headers**:
-  ```json
-  {
-    "Authorization": "Bearer your-dev-token",
-    "Content-Type": "application/json"
-  }
-  ```
-
-### Code Quality Tools
-
-#### SonarLint Configuration
-
-Install SonarLint plugin and configure quality profiles:
-
-```xml
-<!-- .sonarlint/sonar-project.properties -->
-sonar.projectKey=openframe-oss-tenant
-sonar.sources=src/main/java
-sonar.tests=src/test/java
-sonar.java.source=21
-sonar.java.target=21
-sonar.exclusions=**/target/**,**/node_modules/**
-```
-
-#### EditorConfig
-
-Create `.editorconfig` in project root:
-
-```ini
-root = true
-
-[*]
-charset = utf-8
-end_of_line = lf
-indent_style = space
-indent_size = 2
-insert_final_newline = true
-trim_trailing_whitespace = true
-
-[*.java]
-indent_size = 2
-max_line_length = 100
-
-[*.{yml,yaml}]
-indent_size = 2
-
-[*.md]
-trim_trailing_whitespace = false
-```
-
-## Development Shortcuts & Scripts
-
-### Maven Shortcuts
-
-Create shell aliases for common tasks:
+Add these JVM options for better development performance:
 
 ```bash
-# Add to your shell profile
-alias mci='mvn clean install'
-alias mct='mvn clean test'
-alias mcv='mvn clean verify'
-alias mcs='mvn clean compile spring-boot:run'
-alias mdt='mvn dependency:tree'
-alias mef='mvn help:effective-pom'
+# Memory settings
+-Xms1G -Xmx4G
 
-# Multi-module shortcuts
-alias openframe-build='mvn clean compile -T 1C'
-alias openframe-test='mvn clean test -T 1C'
-alias openframe-verify='mvn clean verify -T 1C'
+# GC settings for development
+-XX:+UseG1GC
+-XX:MaxGCPauseMillis=200
+
+# Development-specific optimizations
+-Dspring.jpa.hibernate.ddl-auto=update
+-Dspring.jpa.show-sql=true
+-Dlogging.level.org.springframework.web=DEBUG
 ```
 
-### Development Scripts
+### Maven Build Optimization
 
-#### Service Runner Script
-
-Create `scripts/run-service.sh`:
+Add to `~/.mavenrc`:
 
 ```bash
-#!/bin/bash
-
-SERVICE_NAME=$1
-PROFILE=${2:-"development,local"}
-
-if [ -z "$SERVICE_NAME" ]; then
-    echo "Usage: ./run-service.sh <service-name> [profile]"
-    echo "Available services: api, gateway, auth, management, stream, client"
-    exit 1
-fi
-
-case $SERVICE_NAME in
-    "api")
-        cd openframe/services/openframe-api
-        mvn spring-boot:run -Dspring-boot.run.profiles=$PROFILE
-        ;;
-    "gateway") 
-        cd openframe/services/openframe-gateway
-        mvn spring-boot:run -Dspring-boot.run.profiles=$PROFILE
-        ;;
-    "auth")
-        cd openframe/services/openframe-authorization-server
-        mvn spring-boot:run -Dspring-boot.run.profiles=$PROFILE
-        ;;
-    "management")
-        cd openframe/services/openframe-management
-        mvn spring-boot:run -Dspring-boot.run.profiles=$PROFILE
-        ;;
-    "stream")
-        cd openframe/services/openframe-stream
-        mvn spring-boot:run -Dspring-boot.run.profiles=$PROFILE
-        ;;
-    "client")
-        cd openframe/services/openframe-client
-        mvn spring-boot:run -Dspring-boot.run.profiles=$PROFILE
-        ;;
-    *)
-        echo "Unknown service: $SERVICE_NAME"
-        exit 1
-        ;;
-esac
+export MAVEN_OPTS="-Xmx2G -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
 ```
 
-#### Database Reset Script
+## Useful Development Aliases
 
-Create `scripts/reset-dev-db.sh`:
+Add these aliases to your shell profile:
 
 ```bash
-#!/bin/bash
+# OpenFrame development aliases
+alias of-build="mvn clean install -DskipTests"
+alias of-test="mvn test"
+alias of-run-api="cd openframe/services/openframe-api && mvn spring-boot:run"
+alias of-run-auth="cd openframe/services/openframe-authorization-server && mvn spring-boot:run"
+alias of-run-gateway="cd openframe/services/openframe-gateway && mvn spring-boot:run"
+alias of-run-frontend="cd openframe/services/openframe-frontend && npm run dev"
 
-echo "Resetting development databases..."
+# Docker development
+alias of-deps-up="docker-compose -f docker-compose.dev.yml up -d"
+alias of-deps-down="docker-compose -f docker-compose.dev.yml down"
+alias of-deps-logs="docker-compose -f docker-compose.dev.yml logs -f"
 
-# Stop services
-docker-compose stop
-
-# Remove data volumes
-docker-compose down -v
-
-# Restart with clean state
-docker-compose up -d mongodb redis kafka cassandra pinot nats
-
-# Wait for services to be ready
-echo "Waiting for databases to be ready..."
-sleep 30
-
-# Verify connectivity
-docker exec openframe-mongodb mongosh --eval "db.runCommand('ping')"
-docker exec openframe-redis redis-cli ping
-
-echo "Development databases reset complete!"
+# Useful shortcuts
+alias of-logs="tail -f logs/*.log"
+alias of-clean="mvn clean && docker system prune -f"
 ```
 
-## Testing Environment Setup
+## Troubleshooting Development Issues
 
-### Unit Testing Configuration
+### Common Problems
 
-Configure test profiles in `src/test/resources/application-test.yml`:
-
-```yaml
-spring:
-  profiles:
-    active: test
-  data:
-    mongodb:
-      uri: mongodb://localhost:27017/openframe-test
-  cache:
-    type: simple
-  kafka:
-    bootstrap-servers: localhost:9092
-    consumer:
-      group-id: test-group
-      
-logging:
-  level:
-    com.openframe: DEBUG
-    org.springframework.security: DEBUG
-    org.springframework.kafka: WARN
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics
-```
-
-### Integration Testing
-
-Configure test containers for integration tests:
-
-```xml
-<!-- Add to pom.xml -->
-<dependency>
-    <groupId>org.testcontainers</groupId>
-    <artifactId>junit-jupiter</artifactId>
-    <scope>test</scope>
-</dependency>
-<dependency>
-    <groupId>org.testcontainers</groupId>
-    <artifactId>mongodb</artifactId>
-    <scope>test</scope>
-</dependency>
-<dependency>
-    <groupId>org.testcontainers</groupId>
-    <artifactId>kafka</artifactId>
-    <scope>test</scope>
-</dependency>
-```
-
-## Performance & Monitoring Setup
-
-### JVM Monitoring
-
-Configure JVM monitoring for development:
-
+**Java Version Issues:**
 ```bash
-# Add to JAVA_OPTS for development
-export JAVA_OPTS="\
--Dcom.sun.management.jmxremote \
--Dcom.sun.management.jmxremote.port=9999 \
--Dcom.sun.management.jmxremote.local.only=false \
--Dcom.sun.management.jmxremote.authenticate=false \
--Dcom.sun.management.jmxremote.ssl=false \
--XX:+UseG1GC \
--XX:+UseStringDeduplication \
--XX:MaxGCPauseMillis=200"
+# Check Java version
+java -version
+javac -version
+
+# Set JAVA_HOME if needed
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
 ```
-
-### Application Metrics
-
-Enable detailed metrics for development:
-
-```yaml
-# application-development.yml
-management:
-  endpoints:
-    web:
-      exposure:
-        include: "*"
-  endpoint:
-    health:
-      show-details: always
-  metrics:
-    export:
-      prometheus:
-        enabled: true
-    tags:
-      environment: development
-```
-
-## Troubleshooting Development Environment
-
-### Common Issues
 
 **Maven Build Failures:**
 ```bash
 # Clear Maven cache
-rm -rf ~/.m2/repository
-
-# Rebuild with clean slate
-mvn clean compile -U -T 1C
+rm -rf ~/.m2/repository/com/openframe
+mvn clean install -U
 ```
 
 **Port Conflicts:**
 ```bash
-# Find processes using OpenFrame ports
-lsof -i :8080,8081,8082,8083,8084,8085,8086
+# Find what's using a port
+lsof -i :8080
+netstat -tulpn | grep :8080
 
-# Kill conflicting processes
-kill -9 $(lsof -t -i:8080)
+# Kill process using port
+kill -9 <PID>
 ```
 
 **Database Connection Issues:**
 ```bash
-# Check Docker containers
-docker-compose ps
+# Test MongoDB connection
+mongosh mongodb://localhost:27017
 
-# Restart infrastructure
-docker-compose restart mongodb redis kafka
-
-# Check logs
-docker-compose logs mongodb
+# Test Redis connection
+redis-cli ping
 ```
 
-**IDE Performance Issues:**
-```bash
-# Increase IntelliJ memory (Help → Edit Custom VM Options)
--Xmx4g
--XX:+UseG1GC
--XX:MaxGCPauseMillis=200
+### IDE-Specific Issues
 
-# Clear IntelliJ caches
-File → Invalidate Caches and Restart
-```
+**IntelliJ IDEA:**
+- Clear caches: File → Invalidate Caches and Restart
+- Reimport Maven: Maven panel → Refresh icon
+- Check Project Structure: File → Project Structure
 
-### Development Health Check
-
-Create a script to verify your environment:
-
-```bash
-#!/bin/bash
-echo "OpenFrame Development Environment Health Check"
-echo "=============================================="
-
-# Check Java
-java --version && echo "✅ Java OK" || echo "❌ Java not found"
-
-# Check Maven  
-mvn --version && echo "✅ Maven OK" || echo "❌ Maven not found"
-
-# Check Docker
-docker --version && echo "✅ Docker OK" || echo "❌ Docker not found"
-
-# Check services
-curl -k -f https://localhost:8081/actuator/health >/dev/null 2>&1 && echo "✅ Gateway OK" || echo "❌ Gateway not responding"
-curl -k -f https://localhost:8080/actuator/health >/dev/null 2>&1 && echo "✅ API OK" || echo "❌ API not responding"
-
-# Check databases
-docker exec openframe-mongodb mongosh --eval "db.runCommand('ping')" >/dev/null 2>&1 && echo "✅ MongoDB OK" || echo "❌ MongoDB not responding"
-docker exec openframe-redis redis-cli ping >/dev/null 2>&1 && echo "✅ Redis OK" || echo "❌ Redis not responding"
-
-echo "Health check complete!"
-```
+**VS Code:**
+- Reload window: Ctrl+Shift+P → "Developer: Reload Window"
+- Clear workspace: Remove `.vscode` folder and restart
+- Java issues: Ctrl+Shift+P → "Java: Refresh Projects"
 
 ## Next Steps
 
-With your development environment fully configured, you're ready to:
+With your development environment configured:
 
-1. **[Set up Local Development](local-development.md)** - Advanced development workflows and debugging
-2. **[Explore the Architecture](../architecture/README.md)** - Understand the system design  
-3. **[Review Security Patterns](../security/README.md)** - Learn the security model
-4. **[Study Testing Strategies](../testing/README.md)** - Master the testing approach
+1. **[Local Development Guide](local-development.md)** - Learn the development workflow
+2. **[Architecture Overview](../architecture/README.md)** - Understand the system design
+3. **[Contributing Guidelines](../contributing/guidelines.md)** - Code standards and contribution process
 
-Your development environment is now optimized for productive OpenFrame development! 🚀
+---
+
+Your development environment is now optimized for OpenFrame OSS Tenant development! You should have a productive setup for both backend and frontend development.

@@ -1,170 +1,146 @@
-# OpenFrame Platform Introduction
+# Introduction to OpenFrame OSS Tenant
 
-Welcome to **OpenFrame**, the unified AI-powered MSP platform that replaces expensive proprietary software with open-source alternatives enhanced by intelligent automation.
+Welcome to **OpenFrame OSS Tenant** — the complete AI-driven MSP platform that powers the OpenFrame ecosystem. This is a production-ready, multi-tenant, microservices-based SaaS architecture designed to revolutionize IT infrastructure management through intelligent automation.
 
-## What is OpenFrame?
+## What is OpenFrame OSS Tenant?
 
-OpenFrame is a complete multi-tenant SaaS platform built for Managed Service Providers (MSPs) and IT operations teams. It integrates multiple MSP tools into a single AI-driven interface, automating IT support operations across your entire technology stack.
+OpenFrame OSS Tenant is the unified platform that integrates multiple MSP tools into a single AI-driven interface, automating IT support operations across the entire stack. It replaces expensive proprietary software with open-source alternatives enhanced by intelligent automation.
 
-[![OpenFrame Product Walkthrough (Beta Access)](https://img.youtube.com/vi/awc-yAnkhIo/maxresdefault.jpg)](https://www.youtube.com/watch?v=awc-yAnkhIo)
+[![Autonomous AI Agents That Actually Fix Your Infrastructure | OpenFrame v0.5.2](https://img.youtube.com/vi/jEkFcS4AcQ4/maxresdefault.jpg)](https://www.youtube.com/watch?v=jEkFcS4AcQ4)
 
-## Key Features
+## Key Features & Benefits
 
-### 🤖 AI-Powered Automation
-- **Mingo AI** for technicians - Intelligent automation and decision support
-- **Fae AI** for clients - Self-service capabilities and instant support
-- Advanced machine learning for predictive maintenance and issue resolution
+### 🏢 **Multi-Tenant Architecture**
+- Complete tenant isolation with per-tenant RSA signing keys
+- OAuth2/OIDC with Google and Microsoft SSO integration
+- Secure gateway-based JWT and API key enforcement
+- Scalable tenant discovery and onboarding
 
-### 🏢 Multi-Tenant Architecture  
-- Complete tenant isolation and security
-- OAuth2/OIDC authentication with SSO support
-- Per-tenant configuration and branding
+### 🤖 **AI-Powered Automation**
+- Mingo AI for technicians - intelligent ticket triage and resolution
+- Fae for clients - automated client communication
+- Event-driven processing with real-time enrichment
+- Autonomous agents that actually fix infrastructure
 
-### 🔧 Unified Tool Integration
-- **Fleet MDM** - Device management and compliance
-- **Tactical RMM** - Remote monitoring and management  
-- **MeshCentral** - Remote access and file management
-- Extensible integration framework for additional tools
+### 🔌 **Integrated Tool Ecosystem**
+- Fleet MDM integration for device management
+- Tactical RMM for remote monitoring and management
+- MeshCentral for remote access
+- Extensible architecture for custom integrations
 
-### 📊 Real-Time Analytics
-- Unified event processing and normalization
-- Device monitoring and health tracking
-- Log aggregation and analysis
-- Performance metrics and reporting
+### ⚡ **Event-Driven Architecture**
+- Kafka-based event streaming
+- Debezium CDC (Change Data Capture) for real-time updates
+- Stream processing with data enrichment
+- MongoDB and Cassandra persistence layers
 
-### 🛡️ Enterprise Security
-- Multi-layered security architecture
-- API key management and rate limiting
-- Audit logging and compliance reporting
-- Secure agent-to-server communication
+### 🚀 **Production-Ready**
+- Spring Boot 3.3.0 with Java 21
+- Reactive and blocking hybrid model
+- Distributed locking via Redis
+- Comprehensive monitoring and health checks
 
-## Architecture Overview
-
-OpenFrame follows a modern microservices architecture with event-driven communication:
+## Platform Overview
 
 ```mermaid
-graph TB
-    subgraph "Frontend Layer"
-        TenantUI[Tenant Frontend]
-        ChatUI[AI Chat Interface]
-    end
+graph TD
+    A[Frontend Tenant App] --> B[API Gateway]
+    B --> C[Authorization Service]
+    B --> D[API Service]
+    B --> E[External API Service]
     
-    subgraph "Gateway & Security"
-        Gateway[API Gateway]
-        AuthServer[OAuth2 Server]
-    end
+    D --> F[MongoDB]
+    D --> G[Redis Cache]
+    D --> H[Kafka Events]
     
-    subgraph "Core Services"
-        ApiService[API Service]
-        StreamService[Stream Processing]
-        ManagementService[Management Service]
-        ClientService[Client Service]
-    end
+    H --> I[Stream Service]
+    I --> F
+    I --> J[Cassandra Logs]
     
-    subgraph "Data Layer"
-        MongoDB[(MongoDB)]
-        Kafka[(Kafka)]
-        Redis[(Redis)]
-        Cassandra[(Cassandra)]
-        Pinot[(Apache Pinot)]
-    end
+    K[Management Service] --> F
+    K --> H
+    K --> L[NATS Messaging]
     
-    TenantUI --> Gateway
-    ChatUI --> Gateway
-    Gateway --> AuthServer
-    Gateway --> ApiService
-    
-    ApiService --> MongoDB
-    ApiService --> Kafka
-    StreamService --> Kafka
-    StreamService --> Cassandra
-    ManagementService --> Pinot
-    ClientService --> MongoDB
-    
-    AuthServer --> MongoDB
-    AuthServer --> Redis
+    style A fill:#e1f5fe
+    style B fill:#fff3e0
+    style C fill:#f3e5f5
+    style D fill:#e8f5e8
+    style I fill:#fff8e1
 ```
 
 ## Target Audience
 
-**MSP Professionals**
-- IT service providers looking to reduce vendor costs
-- Teams seeking unified tool management
-- Organizations wanting AI-powered automation
+**OpenFrame OSS Tenant is ideal for:**
 
-**DevOps Engineers** 
-- Platform engineers building MSP solutions
-- Developers integrating monitoring tools
-- Teams implementing multi-tenant SaaS platforms
-
-**System Administrators**
-- IT professionals managing device fleets
-- Administrators seeking centralized monitoring
-- Teams requiring compliance and audit capabilities
+- **MSPs (Managed Service Providers)** looking to modernize their infrastructure
+- **Enterprise IT Teams** seeking unified tool management
+- **SaaS Developers** wanting a multi-tenant foundation
+- **DevOps Engineers** building event-driven systems
+- **Organizations** transitioning from proprietary to open-source solutions
 
 ## Technology Stack
 
 ### Backend Services
-- **Java 21** with Spring Boot 3.3.0
-- **Spring Cloud** for microservices coordination
-- **OAuth2 Authorization Server** for identity management
+- **Spring Boot 3.3.0** with Java 21
+- **OAuth2 Authorization Server** with per-tenant keys
 - **GraphQL** (Netflix DGS) and REST APIs
-- **Apache Kafka** for event streaming
-- **NATS** for real-time messaging
+- **Kafka** for event streaming
+- **MongoDB** for document storage
+- **Redis** for caching and distributed locking
+- **Cassandra** for time-series data
 
-### Data Storage
-- **MongoDB** for operational data
-- **Apache Cassandra** for time-series data
-- **Apache Pinot** for analytics and reporting
-- **Redis** for caching and sessions
+### Frontend & Clients
+- **TypeScript/React** web application
+- **Rust-based** desktop clients
+- **Tauri** for cross-platform desktop apps
+- **OAuth BFF** (Backend for Frontend) pattern
 
-### AI & Automation
-- **Anthropic Claude** integration
-- **VoltAgent Core** for AI orchestration
-- **Custom AI pipelines** for MSP workflows
+### Data & Integration
+- **Debezium** for Change Data Capture
+- **NATS** for messaging
+- **Apache Pinot** for analytics
+- **Fleet MDM** and **Tactical RMM** integrations
 
-### Integration Framework
-- **Debezium** for change data capture
-- **Apache NiFi** for data processing
-- **gRPC** for service communication
-- **WebSocket** support for real-time updates
+## Quick Architecture Benefits
 
-## Benefits
+✅ **Multi-tenant by design** - Complete tenant isolation  
+✅ **Event-driven CDC ingestion** - Real-time data processing  
+✅ **Reactive + blocking hybrid model** - Optimal performance  
+✅ **Cursor-based pagination everywhere** - Scalable data access  
+✅ **Distributed locking via Redis** - Concurrent operation safety  
+✅ **Infrastructure bootstrapping automation** - Easy deployment  
+✅ **Clear contract isolation** - Maintainable architecture
 
-### 💰 Cost Reduction
-- Replace expensive proprietary MSP tools
-- Reduce vendor lock-in and licensing costs
-- Optimize resource utilization with AI insights
+## Getting Started Quickly
 
-### ⚡ Operational Efficiency  
-- Unified interface for all MSP operations
-- Automated routine tasks and workflows
-- Real-time visibility across your infrastructure
+Ready to dive in? Here's your next steps:
 
-### 🔒 Security & Compliance
-- Enterprise-grade security controls
-- Comprehensive audit trails
-- Multi-tenant data isolation
+1. **[Check Prerequisites](prerequisites.md)** - Ensure your environment is ready
+2. **[Quick Start Guide](quick-start.md)** - Get up and running in 5 minutes
+3. **[First Steps](first-steps.md)** - Explore the platform's key features
 
-### 📈 Scalability
-- Cloud-native architecture
-- Horizontal scaling capabilities
-- Event-driven resilience
+## Platform Components
 
-## What's Next?
-
-Ready to get started? Here's your learning path:
-
-1. **[Prerequisites](prerequisites.md)** - Set up your development environment
-2. **[Quick Start](quick-start.md)** - Get OpenFrame running in 5 minutes  
-3. **[First Steps](first-steps.md)** - Explore key features and configurations
+| Component | Purpose |
+|-----------|---------|
+| **API Service** | Tenant-facing REST + GraphQL APIs |
+| **Authorization Service** | OAuth2/OIDC + SSO authentication |
+| **Gateway Service** | JWT validation, routing, rate limiting |
+| **Stream Service** | Kafka ingestion and event processing |
+| **Management Service** | Infrastructure and operational tasks |
+| **External API Service** | Public API key-secured endpoints |
+| **Frontend App** | Multi-tenant web interface |
 
 ## Community & Support
 
-- 💬 **OpenMSP Slack Community**: [Join our community](https://join.slack.com/t/openmsp/shared_invite/zt-36bl7mx0h-3~U2nFH6nqHqoTPXMaHEHA)
-- 🌐 **Website**: [https://flamingo.run](https://flamingo.run)
-- 📚 **Documentation**: [https://www.flamingo.run/openframe](https://www.flamingo.run/openframe)
+Join the OpenMSP community for support and collaboration:
+
+- **Slack Community:** [OpenMSP Workspace](https://join.slack.com/t/openmsp/shared_invite/zt-36bl7mx0h-3~U2nFH6nqHqoTPXMaHEHA)
+- **Website:** [https://www.flamingo.run/openframe](https://www.flamingo.run/openframe)
+- **Main Site:** [https://openframe.ai](https://openframe.ai)
+
+> **Note:** This project uses Slack for all discussions and issue tracking. GitHub Issues and Discussions are not monitored.
 
 ---
 
-**Ready to revolutionize your MSP operations with AI-powered automation?** Let's begin your OpenFrame journey!
+**Next Step:** Review the [Prerequisites](prerequisites.md) to ensure your development environment is properly configured.

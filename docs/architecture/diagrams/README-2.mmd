@@ -1,8 +1,13 @@
-flowchart LR
-    Frontend["Frontend Layer"] --> Edge["Gateway Layer"]
-    Edge --> Identity["Identity Layer"]
-    Edge --> ApiLayer["API Layer"]
-    ApiLayer --> Domain["Domain & Core Libraries"]
-    Domain --> Data["Data & Messaging Core"]
-    Domain --> Streaming["Stream Processing"]
-    Streaming --> Analytics["Analytics (Pinot)"]
+sequenceDiagram
+    participant Browser
+    participant Gateway
+    participant Authz
+    participant API
+
+    Browser->>Authz: Login (OAuth2 / OIDC)
+    Authz-->>Browser: JWT (tenant-scoped)
+    Browser->>Gateway: API Request + JWT
+    Gateway->>Gateway: Validate Issuer & Signature
+    Gateway->>API: Forward Authenticated Request
+    API-->>Gateway: Response
+    Gateway-->>Browser: Response

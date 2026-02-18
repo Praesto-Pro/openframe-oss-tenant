@@ -1,43 +1,167 @@
 # Local Development Guide
 
-This guide covers advanced local development workflows, debugging techniques, hot reloading, and development optimizations for the OpenFrame platform.
+This guide covers the day-to-day development workflow for OpenFrame OSS Tenant, including running services locally, debugging, hot reload configuration, and common development tasks.
 
-> **Prerequisites**: Complete the [Environment Setup](environment.md) guide before proceeding.
+> **Prerequisites:** Complete the [Environment Setup](environment.md) guide first.
 
 ## Development Workflow Overview
 
-OpenFrame uses a microservices architecture that requires coordinated development across multiple services. This guide will help you work efficiently in this distributed environment.
-
-### Service Startup Order
-
-Services must be started in a specific order due to dependencies:
+OpenFrame follows a microservices architecture with multiple Spring Boot services and a React frontend. Here's the typical development workflow:
 
 ```mermaid
-graph TD
-    Infrastructure[Infrastructure Services] --> Auth[Authorization Server]
-    Auth --> API[API Service]
-    Auth --> Gateway[Gateway Service]
-    API --> Management[Management Service]
-    API --> Stream[Stream Service]
-    Gateway --> Client[Client Service]
-    Client --> External[External API Service]
-    
-    Infrastructure -.-> MongoDB[(MongoDB)]
-    Infrastructure -.-> Redis[(Redis)]  
-    Infrastructure -.-> Kafka[(Kafka)]
-    Infrastructure -.-> Cassandra[(Cassandra)]
+flowchart TD
+    A[Start Dependencies] --> B[Start Config Server]
+    B --> C[Start Core Services]
+    C --> D[Start Frontend]
+    D --> E[Develop & Test]
+    E --> F[Debug Issues]
+    F --> E
+    E --> G[Build & Deploy]
 ```
 
-## Hot Reloading & Live Development
+## Starting the Development Environment
 
-### Spring Boot DevTools
+### 1. Start Infrastructure Dependencies
 
-Enable automatic restart and live reload for faster development cycles.
+Start the required infrastructure services using Docker Compose:
 
-#### Configure DevTools in each service
+```bash
+# Start MongoDB, Redis, Kafka, NATS
+docker-compose -f docker-compose.dev.yml up -d
 
-Add to each service's `pom.xml`:
+# Verify services are running
+docker-compose -f docker-compose.dev.yml ps
+```
 
+Expected output:
+```text
+NAME                    SERVICE     STATUS        PORTS
+openframe-mongodb       mongodb     Up 2 minutes  0.0.0.0:27017->27017/tcp
+openframe-redis         redis       Up 2 minutes  0.0.0.0:6379->6379/tcp
+openframe-kafka         kafka       Up 2 minutes  0.0.0.0:9092->9092/tcp
+openframe-nats          nats        Up 2 minutes  0.0.0.0:4222->4222/tcp
+```
+
+### 2. Start Configuration Server (Required First)
+
+The config server must start before other services:
+
+```bash
+cd openframe/services/openframe-config
+mvn spring-boot:run
+```
+
+Wait for startup completion:
+```text
+2024-02-03 10:15:32.145  INFO 12345 --- [main] ConfigServerApplication: Started ConfigServerApplication in 8.234 seconds
+```
+
+### 3. Start Core Services
+
+Start services in separate terminal windows/tabs:
+
+#### Authorization Server
+
+```bash
+cd openframe/services/openframe-authorization-server
+mvn spring-boot:run -Dspring-boot.run.profiles=development
+```
+
+#### API Service
+
+```bash
+cd openframe/services/openframe-api
+mvn spring-boot:run -Dspring-boot.run.profiles=development
+```
+
+#### Gateway Service
+
+```bash
+cd openframe/services/openframe-gateway
+mvn spring-boot:run -Dspring-boot.run.profiles=development
+```
+
+#### Stream Service (Optional for basic development)
+
+```bash
+cd openframe/services/openframe-stream
+mvn spring-boot:run -Dspring-boot.run.profiles=development
+```
+
+### 4. Start Frontend Application
+
+```bash
+cd openframe/services/openframe-frontend
+
+# Install dependencies (if not already done)
+npm install
+
+# Start development server with hot reload
+npm run dev
+```
+
+The frontend will be available at `http://localhost:3000` with hot reload enabled.
+
+## Service Startup Verification
+
+### Health Check Script
+
+Create a script to check all services:
+
+```bash
+#!/bin/bash
+# save as check-services.sh
+
+services=(
+    "Config Server:8888"
+    "Authorization:8081"
+    "API Service:8080"
+    "Gateway:8082"
+    "Frontend:3000"
+)
+
+echo "🔍 Checking OpenFrame services..."
+echo "================================"
+
+for service in "${services[@]}"; do
+    name=$(echo $service | cut -d: -f1)
+    port=$(echo $service | cut -d: -f2)
+    
+    if [[ $port == "3000" ]]; then
+        # Frontend check (different endpoint)
+        if curl -s http://localhost:$port > /dev/null 2>&1; then
+            echo "✅ $name (port $port) - Running"
+        else
+            echo "❌ $name (port $port) - Not responding"
+        fi
+    else
+        # Spring Boot actuator health check
+        health=$(curl -s http://localhost:$port/actuator/health 2>/dev/null | grep -o '"status":"UP"')
+        if [[ $health ]]; then
+            echo "✅ $name (port $port) - Healthy"
+        else
+            echo "❌ $name (port $port) - Unhealthy or not running"
+        fi
+    fi
+done
+
+echo "================================"
+```
+
+Make it executable and run:
+
+```bash
+chmod +x check-services.sh
+./check-services.sh
+```
+
+## Hot Reload Configuration
+
+### Backend Hot Reload (Spring Boot DevTools)
+
+Spring Boot DevTools is configured for automatic restart on file changes.
+
+**Enable DevTools in Maven:**
 ```xml
 <dependency>
     <groupId>org.springframework.boot</groupId>
@@ -46,569 +170,447 @@ Add to each service's `pom.xml`:
 </dependency>
 ```
 
-#### IDE Configuration for Hot Reload
+**IDE Configuration:**
 
 **IntelliJ IDEA:**
-```text
-File → Settings → Build, Execution, Deployment → Compiler
-- Build project automatically: ✓
-
-File → Settings → Advanced Settings  
-- Allow auto-make to start even if developed application is currently running: ✓
-```
+1. Enable "Build project automatically" in Settings → Build → Compiler
+2. Enable "Allow auto-make to start even if developed application is currently running"
+3. Changes to Java files will automatically restart the service
 
 **VS Code:**
-Add to `.vscode/settings.json`:
-```json
-{
-  "spring-boot.ls.java.vmargs": "-Dspring.devtools.restart.enabled=true",
-  "java.compile.nullAnalysis.mode": "automatic",
-  "java.autobuild.enabled": true
-}
+- Java files will auto-compile when saved
+- Restart the Spring Boot run configuration to see changes
+
+### Frontend Hot Reload (Vite)
+
+The React frontend uses Vite for hot module replacement (HMR).
+
+**Configuration is in `vite.config.ts`:**
+```typescript
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 3000,
+    host: true,
+    hmr: {
+      port: 3001
+    }
+  },
+  // ... other config
+})
 ```
 
-### File Watching Configuration
+**Features:**
+- ✅ Instant updates for React components
+- ✅ CSS hot reload
+- ✅ TypeScript type checking
+- ✅ Error overlay in browser
 
-Configure Spring Boot DevTools for optimal performance:
+## Debugging Services
 
-**`application-development.yml`:**
-```yaml
-spring:
-  devtools:
-    restart:
-      enabled: true
-      additional-paths: src/main/java
-      exclude: static/**,public/**,templates/**
-      poll-interval: 1000
-      quiet-period: 400
-    livereload:
-      enabled: true
-      port: 35729
-```
+### Debug Configuration
 
-## Advanced Development Setup
+#### IntelliJ IDEA Debug Setup
 
-### Multi-Service Development with Foreman
+1. **Create Debug Configuration:**
+   - Run → Edit Configurations → Add New → Spring Boot
+   - Name: "Debug OpenFrame API"
+   - Main class: `com.openframe.api.ApiApplication`
+   - VM options: `-Dspring.profiles.active=development -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005`
 
-Use Foreman to manage multiple services from a single terminal.
-
-#### Install Foreman
-
-```bash
-# macOS
-brew install foreman
-
-# Linux (Ruby required)
-gem install foreman
-
-# Windows
-choco install foreman
-```
-
-#### Create Procfile
-
-Create `Procfile` in your project root:
-
-```procfile
-# Infrastructure (run separately with docker-compose)
-# infrastructure: docker-compose up -d
-
-# Core Services (in dependency order)
-auth: cd openframe/services/openframe-authorization-server && mvn spring-boot:run -Dspring-boot.run.profiles=development,local -Dspring-boot.run.jvmArguments="-Xmx1g"
-api: sleep 15 && cd openframe/services/openframe-api && mvn spring-boot:run -Dspring-boot.run.profiles=development,local -Dspring-boot.run.jvmArguments="-Xmx1g"
-gateway: sleep 20 && cd openframe/services/openframe-gateway && mvn spring-boot:run -Dspring-boot.run.profiles=development,local -Dspring-boot.run.jvmArguments="-Xmx1g"
-management: sleep 25 && cd openframe/services/openframe-management && mvn spring-boot:run -Dspring-boot.run.profiles=development,local -Dspring-boot.run.jvmArguments="-Xmx1g"
-stream: sleep 30 && cd openframe/services/openframe-stream && mvn spring-boot:run -Dspring-boot.run.profiles=development,local -Dspring-boot.run.jvmArguments="-Xmx1g"
-client: sleep 35 && cd openframe/services/openframe-client && mvn spring-boot:run -Dspring-boot.run.profiles=development,local -Dspring-boot.run.jvmArguments="-Xmx1g"
-external: sleep 40 && cd openframe/services/openframe-external-api && mvn spring-boot:run -Dspring-boot.run.profiles=development,local -Dspring-boot.run.jvmArguments="-Xmx1g"
-
-# Frontend (if applicable)
-frontend: sleep 45 && cd openframe/services/openframe-frontend && npm run dev
-```
-
-#### Run All Services
-
-```bash
-# Start infrastructure first
-docker-compose up -d
-
-# Wait for infrastructure to be ready
-sleep 30
-
-# Start all application services
-foreman start
-```
-
-### Development with Docker Compose
-
-For a more isolated development environment, use Docker Compose profiles.
-
-#### Create Development Docker Compose
-
-**`docker-compose.dev.yml`:**
-```yaml
-version: '3.8'
-
-services:
-  # Extend base services with development overrides
-  openframe-api:
-    extends:
-      file: docker-compose.yml
-      service: openframe-api
-    environment:
-      SPRING_PROFILES_ACTIVE: development,docker
-      SPRING_DEVTOOLS_RESTART_ENABLED: true
-    volumes:
-      - ./openframe/services/openframe-api/src:/app/src
-      - ./openframe/services/openframe-api/target/classes:/app/target/classes
-    command: ["mvn", "spring-boot:run", "-Dspring-boot.run.profiles=development,docker"]
-    ports:
-      - "8080:8080"
-      - "5005:5005"  # Debug port
-
-  openframe-gateway:
-    extends:
-      file: docker-compose.yml
-      service: openframe-gateway
-    environment:
-      SPRING_PROFILES_ACTIVE: development,docker
-    volumes:
-      - ./openframe/services/openframe-gateway/src:/app/src
-      - ./openframe/services/openframe-gateway/target/classes:/app/target/classes
-    ports:
-      - "8081:8081"
-      - "5006:5005"  # Debug port
-```
-
-#### Run Development Environment
-
-```bash
-# Start with development overrides
-docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
-```
-
-## Debugging Configuration
-
-### Remote Debugging with IntelliJ IDEA
-
-#### Configure Debug Settings
-
-1. **Create Remote Debug Configuration:**
-   ```text
-   Run → Edit Configurations → + → Remote JVM Debug
-   
-   Configuration:
-   - Name: OpenFrame API Debug
-   - Host: localhost
-   - Port: 5005
-   - Command line arguments: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
-   ```
-
-2. **Start Service with Debug Options:**
-   ```bash
-   cd openframe/services/openframe-api
-   mvn spring-boot:run \
-     -Dspring-boot.run.profiles=development,local \
-     -Dspring-boot.run.jvmArguments="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
-   ```
-
-3. **Attach Debugger:**
+2. **Start in Debug Mode:**
+   - Click the debug icon (🐛) next to your configuration
    - Set breakpoints in your code
-   - Run the remote debug configuration
-   - IntelliJ will connect to the running service
+   - Make API requests to trigger breakpoints
 
-#### Debug Multiple Services
+#### Remote Debugging
 
-Configure different debug ports for each service:
+Start services with debug ports:
 
 ```bash
-# Authorization Server (port 5005)
+# API Service on debug port 5005
 mvn spring-boot:run -Dspring-boot.run.jvmArguments="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
 
-# API Service (port 5006)  
+# Authorization Service on debug port 5006  
 mvn spring-boot:run -Dspring-boot.run.jvmArguments="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5006"
 
-# Gateway Service (port 5007)
+# Gateway Service on debug port 5007
 mvn spring-boot:run -Dspring-boot.run.jvmArguments="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5007"
 ```
 
-### VS Code Debugging
+Connect your IDE to the appropriate debug port.
 
-#### Configure Launch Settings
+### Frontend Debugging
 
-**`.vscode/launch.json`:**
+#### Browser DevTools
+
+1. **React DevTools Extension:**
+   - Install React Developer Tools browser extension
+   - Access component tree and props in the "Components" tab
+   - Profile performance in the "Profiler" tab
+
+2. **Redux DevTools (if using Redux):**
+   - Install Redux DevTools extension
+   - Monitor state changes and actions
+
+#### VS Code Frontend Debugging
+
+Create `.vscode/launch.json` for frontend debugging:
+
 ```json
 {
   "version": "0.2.0",
   "configurations": [
     {
-      "type": "java",
-      "name": "Debug API Service",
-      "request": "attach",
-      "hostName": "localhost",
-      "port": 5005,
-      "projectName": "openframe-api"
-    },
-    {
-      "type": "java", 
-      "name": "Debug Gateway Service",
-      "request": "attach",
-      "hostName": "localhost", 
-      "port": 5007,
-      "projectName": "openframe-gateway"
+      "name": "Debug Frontend in Chrome",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/openframe/services/openframe-frontend/node_modules/.bin/vite",
+      "args": ["--mode", "development"],
+      "console": "integratedTerminal",
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "runtimeArgs": ["--preserve-symlinks"]
     }
   ]
 }
 ```
 
-### Distributed Debugging
+## Common Development Tasks
 
-When debugging across multiple services, use correlation IDs to trace requests:
+### Building and Testing
 
-#### Enable Request Tracing
-
-**`application-development.yml`:**
-```yaml
-logging:
-  level:
-    com.openframe: DEBUG
-    org.springframework.web: DEBUG
-    org.springframework.security: DEBUG
-  pattern:
-    console: "%d{HH:mm:ss.SSS} [%thread] [%X{traceId}] %-5level %logger{36} - %msg%n"
-
-management:
-  tracing:
-    sampling:
-      probability: 1.0
-```
-
-#### Add Correlation ID Filter
-
-```java
-@Component
-@Order(1)
-public class CorrelationIdFilter implements Filter {
-    
-    private static final String CORRELATION_ID_HEADER = "X-Correlation-ID";
-    private static final String CORRELATION_ID_MDC = "correlationId";
-    
-    @Override
-    public void doFilter(ServletRequest request, ServletResponse response, 
-                        FilterChain chain) throws IOException, ServletException {
-        HttpServletRequest httpRequest = (HttpServletRequest) request;
-        HttpServletResponse httpResponse = (HttpServletResponse) response;
-        
-        String correlationId = httpRequest.getHeader(CORRELATION_ID_HEADER);
-        if (correlationId == null) {
-            correlationId = UUID.randomUUID().toString();
-        }
-        
-        MDC.put(CORRELATION_ID_MDC, correlationId);
-        httpResponse.setHeader(CORRELATION_ID_HEADER, correlationId);
-        
-        try {
-            chain.doFilter(request, response);
-        } finally {
-            MDC.remove(CORRELATION_ID_MDC);
-        }
-    }
-}
-```
-
-## Database Development Workflow
-
-### MongoDB Development
-
-#### Use MongoDB Compass for Development
+#### Full Project Build
 
 ```bash
-# Connection string
-mongodb://localhost:27017
+# Build entire project
+mvn clean install
 
-# Switch to development database
-use openframe-dev
+# Build without tests (faster)
+mvn clean install -DskipTests
 
-# Common development queries
-db.users.find().pretty()
-db.organizations.find().pretty()  
-db.devices.find().pretty()
+# Build specific service
+cd openframe/services/openframe-api
+mvn clean install
 ```
 
-#### Database Seeding Script
+#### Running Tests
 
-Create `scripts/seed-dev-data.js`:
-
-```javascript
-// MongoDB seed script for development
-use openframe-dev;
-
-// Create test organization
-db.organizations.insertOne({
-  _id: ObjectId(),
-  name: "Dev Test Organization",
-  domain: "dev-test.local",
-  contactEmail: "admin@dev-test.local",
-  status: "ACTIVE",
-  createdAt: new Date(),
-  updatedAt: new Date()
-});
-
-// Create test user
-db.users.insertOne({
-  _id: ObjectId(),
-  email: "developer@openframe.local",
-  firstName: "Dev",
-  lastName: "User",
-  status: "ACTIVE",
-  roles: ["ADMIN"],
-  organizationId: db.organizations.findOne()._id,
-  createdAt: new Date()
-});
-
-print("Development data seeded successfully!");
-```
-
-Run the seed script:
 ```bash
-docker exec -i openframe-mongodb mongosh < scripts/seed-dev-data.js
+# Run all tests
+mvn test
+
+# Run tests for specific service
+cd openframe/services/openframe-api
+mvn test
+
+# Run specific test class
+mvn test -Dtest=ApiControllerTest
+
+# Run tests with coverage
+mvn test jacoco:report
 ```
 
-### Redis Development
+#### Frontend Build and Test
 
-Use Redis CLI for cache debugging:
+```bash
+cd openframe/services/openframe-frontend
+
+# Run tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Build for production
+npm run build
+
+# Run linting
+npm run lint
+
+# Fix linting issues
+npm run lint:fix
+```
+
+### Database Operations
+
+#### MongoDB Development Operations
+
+```bash
+# Connect to development database
+mongosh mongodb://admin:password@localhost:27017/openframe_dev
+
+# Common operations
+db.tenants.find({}).pretty()
+db.users.find({}).pretty()
+db.devices.countDocuments()
+
+# Create test data
+db.tenants.insertOne({
+  name: "Test Tenant",
+  domain: "test.openframe.local",
+  status: "ACTIVE"
+})
+```
+
+#### Redis Development Operations
 
 ```bash
 # Connect to Redis
-docker exec -it openframe-redis redis-cli
+redis-cli
 
-# Common development commands
-KEYS *
-GET "session:*"
-FLUSHDB  # Clear all keys (development only!)
-MONITOR  # Watch all Redis commands in real-time
+# Check cached data
+KEYS openframe:*
+GET openframe:tenant:12345
+HGETALL openframe:session:abcdef
+
+# Clear development cache
+FLUSHDB
 ```
 
-## Testing During Development
+### Log Analysis
 
-### Continuous Testing
+#### Application Logs
 
-Set up continuous testing to run tests automatically:
+Services write logs to the console and optionally to files.
+
+**View real-time logs:**
+```bash
+# API Service logs
+tail -f openframe/services/openframe-api/logs/application.log
+
+# All services (if configured to write to files)
+tail -f openframe/services/*/logs/application.log
+```
+
+**Common log patterns to watch for:**
+- `ERROR` - Application errors
+- `WARN` - Warnings that might indicate issues
+- `INFO` - General application flow
+- `DEBUG` - Detailed execution information
+
+#### Structured Logging Search
+
+If using JSON logging format:
 
 ```bash
-# Install entr for file watching (macOS)
-brew install entr
+# Search for errors in the last hour
+grep '"level":"ERROR"' application.log | jq '.'
 
-# Watch for changes and run tests
-find src/main/java src/test/java -name "*.java" | entr -c mvn test
+# Filter by specific component
+grep '"logger":"com.openframe.api.controller"' application.log | jq '.'
+
+# Search for specific tenant activity
+grep '"tenantId":"tenant-123"' application.log | jq '.'
 ```
 
-### Quick Test Feedback
+### Performance Monitoring
 
-Create aliases for fast test execution:
+#### JVM Monitoring
+
+**Using built-in actuator endpoints:**
 
 ```bash
-# Add to shell profile
-alias test-api='cd openframe/services/openframe-api && mvn test -Dtest=*Test'
-alias test-gateway='cd openframe/services/openframe-gateway && mvn test -Dtest=*Test' 
-alias test-auth='cd openframe/services/openframe-authorization-server && mvn test -Dtest=*Test'
+# Health check
+curl http://localhost:8080/actuator/health
 
-# Run specific test class
-alias test-class='mvn test -Dtest='
+# Metrics
+curl http://localhost:8080/actuator/metrics
 
-# Example usage
-test-class UserServiceTest
+# JVM memory info
+curl http://localhost:8080/actuator/metrics/jvm.memory.used
+
+# HTTP request metrics
+curl http://localhost:8080/actuator/metrics/http.server.requests
 ```
 
-### Integration Testing in Development
-
-#### Test with Real Services
+**Using JConsole for detailed monitoring:**
 
 ```bash
-# Start infrastructure
-docker-compose up -d mongodb redis kafka
+# Start JConsole (included with JDK)
+jconsole
 
-# Start minimal service set for integration testing
-./scripts/run-service.sh auth test &
-./scripts/run-service.sh api test &
-./scripts/run-service.sh gateway test &
-
-# Run integration tests
-mvn verify -P integration-tests -Dspring.profiles.active=test
+# Connect to local Spring Boot process
+# Look for process: com.openframe.api.ApiApplication
 ```
 
-## Development Monitoring & Observability
+#### Frontend Performance
 
-### Application Metrics Dashboard
-
-Access development metrics:
-
-| Service | Health Check | Metrics | Info |
-|---------|-------------|---------|------|
-| **API Service** | http://localhost:8080/actuator/health | http://localhost:8080/actuator/metrics | http://localhost:8080/actuator/info |
-| **Gateway** | http://localhost:8081/actuator/health | http://localhost:8081/actuator/metrics | http://localhost:8081/actuator/info |
-| **Auth Server** | http://localhost:8082/actuator/health | http://localhost:8082/actuator/metrics | http://localhost:8082/actuator/info |
-
-### Custom Development Endpoints
-
-Add development-only endpoints for debugging:
-
-```java
-@RestController
-@RequestMapping("/dev")
-@Profile("development")
-public class DevController {
-    
-    @GetMapping("/cache/clear")
-    public ResponseEntity<String> clearCache() {
-        cacheManager.getCacheNames().forEach(name -> 
-            Objects.requireNonNull(cacheManager.getCache(name)).clear());
-        return ResponseEntity.ok("Cache cleared");
-    }
-    
-    @GetMapping("/db/seed")
-    public ResponseEntity<String> seedDatabase() {
-        // Seed development data
-        return ResponseEntity.ok("Database seeded");
-    }
-    
-    @GetMapping("/tokens/generate")
-    public ResponseEntity<String> generateTestToken() {
-        // Generate test JWT token
-        return ResponseEntity.ok(jwtService.generateTestToken());
-    }
-}
-```
-
-## Performance Optimization for Development
-
-### JVM Tuning for Development
-
-Add to your service startup scripts:
-
+**Analyze bundle size:**
 ```bash
-export JAVA_OPTS="\
-  -Xmx2g \
-  -Xms512m \
-  -XX:+UseG1GC \
-  -XX:+UseStringDeduplication \
-  -XX:MaxGCPauseMillis=200 \
-  -Dspring.devtools.restart.enabled=true \
-  -Dspring.devtools.livereload.enabled=true"
-```
-
-### Maven Build Optimization
-
-**`.mvn/maven.config`:**
-```
--T 1C
--Dmaven.artifact.threads=8
--Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
-```
-
-### Selective Service Development
-
-When working on specific features, you may not need all services running:
-
-#### Frontend Development Only
-```bash
-# Minimal backend for frontend work
-docker-compose up -d mongodb redis
-./scripts/run-service.sh auth &
-./scripts/run-service.sh api &
-./scripts/run-service.sh gateway &
-
-# Start frontend
 cd openframe/services/openframe-frontend
-npm run dev
+npm run build
+
+# Analyze bundle composition
+npx vite-bundle-analyzer dist
 ```
 
-#### API Development Only
+**Check for memory leaks:**
+1. Open Chrome DevTools → Performance tab
+2. Record a typical user session
+3. Look for increasing memory usage over time
+
+## Troubleshooting Common Issues
+
+### Service Startup Issues
+
+**Config Server Connection Failures:**
 ```bash
-# Backend services without frontend
-docker-compose up -d mongodb redis kafka
-./scripts/run-service.sh auth &
-./scripts/run-service.sh api &
+# Check if config server is running
+curl http://localhost:8888/actuator/health
 
-# Test API directly
-curl -k https://localhost:8080/actuator/health
+# Check service logs for configuration errors
+grep "Could not resolve" logs/application.log
 ```
 
-## Troubleshooting Common Development Issues
-
-### Service Startup Problems
-
-**Issue: Services fail to start due to port conflicts**
+**Database Connection Issues:**
 ```bash
-# Kill processes on OpenFrame ports
-pkill -f "spring-boot:run"
-lsof -ti :8080,8081,8082 | xargs kill -9
+# Test MongoDB connection
+mongosh mongodb://localhost:27017 --eval "db.adminCommand('ismaster')"
+
+# Test Redis connection
+redis-cli ping
 ```
 
-**Issue: Database connection failures**
+**Port Conflicts:**
 ```bash
-# Check database containers
-docker-compose ps
-docker-compose logs mongodb
+# Find what's using a port
+lsof -i :8080
+netstat -tulpn | grep :8080
 
-# Reset databases if needed
-docker-compose down -v
-docker-compose up -d mongodb redis kafka
+# Kill the process
+kill -9 <PID>
 ```
 
-### Maven Build Issues
+### Memory and Performance Issues
 
-**Issue: Compilation failures after git pull**
+**OutOfMemoryError:**
 ```bash
-# Clean and rebuild everything
-mvn clean install -DskipTests -T 1C
-
-# If that fails, clear local repository
-rm -rf ~/.m2/repository/com/openframe
-mvn clean install -DskipTests
+# Increase heap size
+export MAVEN_OPTS="-Xmx4G"
+mvn spring-boot:run
 ```
 
-**Issue: Test failures in development**
+**Slow startup:**
 ```bash
-# Run tests with clean slate
-mvn clean test -Dspring.profiles.active=test
-
-# Skip integration tests during development
-mvn clean test -DexcludeGroups=integration
+# Use tiered compilation
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-XX:+TieredCompilation -XX:TieredStopAtLevel=1"
 ```
 
-### Development Environment Reset
+### Frontend Issues
 
-When your development environment gets into a bad state:
+**Dependency Issues:**
+```bash
+# Clear npm cache
+npm cache clean --force
+
+# Delete node_modules and reinstall
+rm -rf node_modules package-lock.json
+npm install
+```
+
+**Build Errors:**
+```bash
+# Check TypeScript errors
+npm run type-check
+
+# Run linting
+npm run lint
+```
+
+## Development Scripts
+
+Create these helpful scripts in your project root:
+
+### `scripts/dev-start.sh`
 
 ```bash
 #!/bin/bash
-# Reset development environment script
+echo "🚀 Starting OpenFrame Development Environment"
 
-echo "Stopping all services..."
-pkill -f spring-boot:run
-docker-compose down -v
+# Start dependencies
+echo "📦 Starting infrastructure dependencies..."
+docker-compose -f docker-compose.dev.yml up -d
 
-echo "Cleaning Maven artifacts..."
-mvn clean -q
+# Wait for dependencies
+sleep 10
 
-echo "Starting fresh infrastructure..."
-docker-compose up -d
+# Start services in background
+echo "🛠️ Starting core services..."
+cd openframe/services/openframe-config && mvn spring-boot:run > /dev/null 2>&1 &
+sleep 15
 
-echo "Waiting for infrastructure..."
-sleep 30
+cd ../openframe-authorization-server && mvn spring-boot:run > /dev/null 2>&1 &
+cd ../openframe-api && mvn spring-boot:run > /dev/null 2>&1 &
+cd ../openframe-gateway && mvn spring-boot:run > /dev/null 2>&1 &
 
-echo "Environment reset complete!"
-echo "You can now start services with: foreman start"
+echo "⏳ Services starting... Check health with ./check-services.sh"
+echo "🌐 Frontend will be available at http://localhost:3000"
+echo "📊 Start frontend with: cd openframe/services/openframe-frontend && npm run dev"
+```
+
+### `scripts/dev-stop.sh`
+
+```bash
+#!/bin/bash
+echo "🛑 Stopping OpenFrame Development Environment"
+
+# Kill Spring Boot processes
+pkill -f "spring-boot:run"
+
+# Stop Docker dependencies
+docker-compose -f docker-compose.dev.yml down
+
+echo "✅ Development environment stopped"
+```
+
+Make scripts executable:
+```bash
+chmod +x scripts/dev-start.sh scripts/dev-stop.sh
+```
+
+## Performance Tips
+
+### Development Optimizations
+
+**Maven Build Speed:**
+```bash
+# Use parallel builds
+mvn clean install -T 1C
+
+# Skip tests during development builds
+mvn clean install -DskipTests
+
+# Use offline mode (when dependencies are cached)
+mvn clean install -o
+```
+
+**Spring Boot Startup Speed:**
+```bash
+# Use development profile optimizations
+-Dspring.jpa.hibernate.ddl-auto=update
+-Dspring.jpa.show-sql=false
+-Dlogging.level.root=WARN
+```
+
+**Frontend Development:**
+```bash
+# Use Vite's fast refresh
+npm run dev
+
+# Disable type checking for faster builds (development only)
+npm run dev -- --skip-type-check
 ```
 
 ## Next Steps
 
-With your local development environment fully optimized, explore:
+With your local development environment running smoothly:
 
-1. **[Architecture Overview](../architecture/README.md)** - Deep dive into system design
-2. **[Security Best Practices](../security/README.md)** - Understand security patterns
-3. **[Testing Strategies](../testing/README.md)** - Master testing approaches  
-4. **[Contributing Guidelines](../contributing/guidelines.md)** - Learn the contribution process
+1. **[Architecture Overview](../architecture/README.md)** - Understand the system design
+2. **[Security Best Practices](../security/README.md)** - Implement secure development practices  
+3. **[Testing Overview](../testing/README.md)** - Learn the testing strategy
 
-You now have a powerful, efficient OpenFrame development workflow! 🚀
+---
+
+You now have a complete local development workflow! This setup provides hot reload, debugging capabilities, and efficient development practices for the OpenFrame OSS Tenant platform.

@@ -1,15 +1,22 @@
 flowchart TD
-    Management["Management Service Core"]
-    Mongo["MongoDB"]
-    Redis["Redis"]
-    NATS["NATS JetStream"]
-    Pinot["Pinot Controller"]
-    Debezium["Debezium Connect"]
-    ClientAgents["Client Agents"]
+    App["ManagementApplication"] --> Config["Management Configuration"]
+    App --> Init["Initializers"]
+    App --> Controllers["REST Controllers"]
+    App --> Schedulers["Distributed Schedulers"]
 
-    Management -->|"reads/writes"| Mongo
-    Management -->|"distributed locks"| Redis
-    Management -->|"creates streams"| NATS
-    Management -->|"deploys schema & tables"| Pinot
-    Management -->|"creates connectors"| Debezium
-    Management -->|"publishes updates"| ClientAgents
+    Init --> Pinot["PinotConfigInitializer"]
+    Init --> Nats["NatsStreamConfigurationInitializer"]
+    Init --> AgentInit["IntegratedToolAgentInitializer"]
+    Init --> ClientInit["OpenFrameClientConfigurationInitializer"]
+    Init --> SecretInit["AgentRegistrationSecretInitializer"]
+    Init --> DebeziumInit["DebeziumConnectorInitializer"]
+
+    Controllers --> ToolCtrl["IntegratedToolController"]
+    Controllers --> ReleaseCtrl["ReleaseVersionController"]
+
+    Schedulers --> ApiKeySync["ApiKeyStatsSyncScheduler"]
+    Schedulers --> DebeziumHealth["DebeziumHealthCheckScheduler"]
+    Schedulers --> AgentFallback["AgentVersionUpdatePublishFallbackScheduler"]
+
+    ToolCtrl --> DebeziumSvc["DebeziumService"]
+    AgentFallback --> Publisher["Update Publishers"]
