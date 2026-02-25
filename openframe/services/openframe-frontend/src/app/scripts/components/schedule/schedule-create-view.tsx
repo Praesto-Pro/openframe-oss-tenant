@@ -23,9 +23,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo } from 'react';
 import { Controller, FormProvider, useFieldArray, useForm } from 'react-hook-form';
-import { useScriptSchedule } from '../hooks/use-script-schedule';
-import { useCreateScriptSchedule, useUpdateScriptSchedule } from '../hooks/use-script-schedule-mutations';
-import { useScripts } from '../hooks/use-scripts';
+import { useScriptSchedule } from '../../hooks/use-script-schedule';
+import { useCreateScriptSchedule, useUpdateScriptSchedule } from '../../hooks/use-script-schedule-mutations';
+import { useScripts } from '../../hooks/use-scripts';
 import {
   buildCreatePayload,
   type CreateScheduleFormData,
@@ -33,10 +33,10 @@ import {
   type Platform,
   REPEAT_PERIOD_OPTIONS,
   scheduleDetailToFormData,
-} from '../types/script-schedule.types';
-import { AVAILABLE_PLATFORMS, DISABLED_PLATFORMS } from '../utils/script-utils';
+} from '../../types/script-schedule.types';
+import { AVAILABLE_PLATFORMS, DISABLED_PLATFORMS } from '../../utils/script-utils';
 import { ScheduleActionFormCard } from './schedule-action-form-card';
-import { ScheduleCreateLoader } from './schedule-create-loader';
+import { ScheduleCreateSkeleton } from './schedule-create-skeleton';
 
 interface ScheduleCreateViewProps {
   scheduleId?: string;
@@ -167,7 +167,11 @@ export function ScheduleCreateView({ scheduleId }: ScheduleCreateViewProps = {})
         }
       } catch (e) {
         const msg = e instanceof Error ? e.message : `Failed to ${isEditMode ? 'update' : 'create'} schedule`;
-        toast({ title: `${isEditMode ? 'Update' : 'Creation'} failed`, description: msg, variant: 'destructive' });
+        toast({
+          title: `${isEditMode ? 'Update' : 'Creation'} failed`,
+          description: msg,
+          variant: 'destructive',
+        });
       }
     },
     [isEditMode, scheduleId, scripts, createMutation, updateMutation, toast, router],
@@ -177,7 +181,11 @@ export function ScheduleCreateView({ scheduleId }: ScheduleCreateViewProps = {})
     (errors: any) => {
       const firstError = Object.values(errors)[0] as any;
       const message = firstError?.message || firstError?.root?.message || 'Please fix validation errors';
-      toast({ title: 'Validation error', description: message, variant: 'destructive' });
+      toast({
+        title: 'Validation error',
+        description: message,
+        variant: 'destructive',
+      });
     },
     [toast],
   );
@@ -214,7 +222,7 @@ export function ScheduleCreateView({ scheduleId }: ScheduleCreateViewProps = {})
   }
 
   if (isEditMode && isLoadingSchedule) {
-    return <ScheduleCreateLoader />;
+    return <ScheduleCreateSkeleton />;
   }
 
   return (

@@ -2,28 +2,29 @@
 
 import {
   Button,
-  DeviceType,
+  type DeviceType,
+  getDeviceTypeIcon,
   Modal,
   ModalFooter,
   ModalHeader,
   ModalTitle,
-  SelectableDeviceCard,
 } from '@flamingo-stack/openframe-frontend-core';
+import { SelectButton } from '@flamingo-stack/openframe-frontend-core/components/features';
 import { SearchIcon } from '@flamingo-stack/openframe-frontend-core/components/icons-v2';
 import { Autocomplete, Input, Label, ListLoader } from '@flamingo-stack/openframe-frontend-core/components/ui';
 import { useDebounce, useToast } from '@flamingo-stack/openframe-frontend-core/hooks';
 import { X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
-import { DEVICE_STATUS } from '../../devices/constants/device-statuses';
-import { GET_DEVICES_QUERY } from '../../devices/queries/devices-queries';
-import { Device, DevicesGraphQlNode, GraphQlResponse } from '../../devices/types/device.types';
-import { getTacticalAgentId } from '../../devices/utils/device-action-utils';
-import { getDeviceOperatingSystem } from '../../devices/utils/device-status';
-import { createDeviceListItem } from '../../devices/utils/device-transform';
-import { useOrganizationsMin } from '../../organizations/hooks/use-organizations-min';
-import { getDevicePrimaryId } from '../utils/device-helpers';
-import { mapPlatformsToOsTypes } from '../utils/script-utils';
+import { DEVICE_STATUS } from '../../../devices/constants/device-statuses';
+import { GET_DEVICES_QUERY } from '../../../devices/queries/devices-queries';
+import type { Device, DevicesGraphQlNode, GraphQlResponse } from '../../../devices/types/device.types';
+import { getTacticalAgentId } from '../../../devices/utils/device-action-utils';
+import { getDeviceOperatingSystem } from '../../../devices/utils/device-status';
+import { createDeviceListItem } from '../../../devices/utils/device-transform';
+import { useOrganizationsMin } from '../../../organizations/hooks/use-organizations-min';
+import { getDevicePrimaryId } from '../../utils/device-helpers';
+import { mapPlatformsToOsTypes } from '../../utils/script-utils';
 
 export interface SelectedTestDevice {
   agentToolId: string;
@@ -213,7 +214,11 @@ export function TestScriptModal({ isOpen, onClose, onDeviceSelected, supportedPl
       <ModalHeader>
         <div className="flex items-center justify-between w-full">
           <ModalTitle>Select Device</ModalTitle>
-          <button onClick={onClose} className="text-ods-text-secondary hover:text-ods-text-primary transition-colors">
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-ods-text-secondary hover:text-ods-text-primary transition-colors"
+          >
             <X size={24} />
           </button>
         </div>
@@ -225,7 +230,7 @@ export function TestScriptModal({ isOpen, onClose, onDeviceSelected, supportedPl
           <div className="flex flex-col gap-3">
             <Label className="text-ods-text-primary font-semibold text-lg">Search by Device</Label>
             <Input
-              startAdornment={<SearchIcon size={20} />}
+              startAdornment={<SearchIcon />}
               placeholder="Search for Devices"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
@@ -234,11 +239,13 @@ export function TestScriptModal({ isOpen, onClose, onDeviceSelected, supportedPl
           <div className="flex flex-col gap-3">
             <Label className="text-ods-text-primary font-semibold text-lg">Filter by Organization</Label>
             <Autocomplete
+              startAdornment={<SearchIcon />}
               placeholder="Select Organization"
               options={organizationOptions}
               value={selectedOrgIds}
               onChange={setSelectedOrgIds}
               limitTags={2}
+              multiple
             />
           </div>
         </div>
@@ -265,13 +272,13 @@ export function TestScriptModal({ isOpen, onClose, onDeviceSelected, supportedPl
                 const isSelected = selectedDeviceId === id;
 
                 return (
-                  <SelectableDeviceCard
+                  <SelectButton
                     key={id}
                     title={device.displayName || device.hostname}
-                    type={deviceType}
-                    subtitle={getDeviceOperatingSystem(device.osType)}
+                    icon={getDeviceTypeIcon(deviceType, { className: 'w-5 h-5' })}
+                    description={getDeviceOperatingSystem(device.osType)}
                     selected={isSelected}
-                    onSelect={() => handleSelectDevice(device)}
+                    onClick={() => handleSelectDevice(device)}
                   />
                 );
               })}

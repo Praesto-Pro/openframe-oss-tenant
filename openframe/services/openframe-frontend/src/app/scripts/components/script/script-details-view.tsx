@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  CardLoader,
   DetailPageContainer,
   LoadError,
   NotFoundError,
@@ -10,8 +9,9 @@ import {
 import { PenEditIcon, PlayIcon } from '@flamingo-stack/openframe-frontend-core/components/icons-v2';
 import { useRouter } from 'next/navigation';
 import { useCallback, useMemo } from 'react';
-import { useScriptDetails } from '../hooks/use-script-details';
+import { useScriptDetails } from '../../hooks/use-script-details';
 import { ScriptArgumentsCard } from './script-arguments-card';
+import { ScriptDetailsSkeleton } from './script-details-skeleton';
 import { ScriptEditor } from './script-editor';
 
 interface ScriptDetailsViewProps {
@@ -55,7 +55,7 @@ export function ScriptDetailsView({ scriptId }: ScriptDetailsViewProps) {
   );
 
   if (isLoading) {
-    return <CardLoader items={4} />;
+    return <ScriptDetailsSkeleton />;
   }
 
   if (error) {

@@ -1,11 +1,12 @@
 'use client';
 
-import { DeviceType, LoadError, SelectableDeviceCard, useSmUp } from '@flamingo-stack/openframe-frontend-core';
+import { type DeviceType, getDeviceTypeIcon, LoadError, useSmUp } from '@flamingo-stack/openframe-frontend-core';
+import { SelectButton } from '@flamingo-stack/openframe-frontend-core/components/features';
 import { SearchIcon } from '@flamingo-stack/openframe-frontend-core/components/icons-v2';
 import { Autocomplete, Button, Input, ListLoader } from '@flamingo-stack/openframe-frontend-core/components/ui';
-import type { Device } from '../../devices/types/device.types';
-import { getDeviceOperatingSystem } from '../../devices/utils/device-status';
-import { getDevicePrimaryId } from '../utils/device-helpers';
+import type { Device } from '../../../devices/types/device.types';
+import { getDeviceOperatingSystem } from '../../../devices/utils/device-status';
+import { getDevicePrimaryId } from '../../utils/device-helpers';
 
 interface OrganizationOption {
   label: string;
@@ -55,7 +56,7 @@ export function DeviceSelectionPanel({
         <div className="flex flex-col gap-3">
           <div className="text-ods-text-primary font-semibold text-lg">Search by Device</div>
           <Input
-            startAdornment={<SearchIcon size={20} />}
+            startAdornment={<SearchIcon />}
             placeholder="Search for Devices"
             value={searchTerm}
             onChange={e => onSearchChange(e.target.value)}
@@ -65,11 +66,13 @@ export function DeviceSelectionPanel({
           <div className="text-ods-text-primary font-semibold text-lg">Filter by Organization</div>
           <div className="w-full">
             <Autocomplete
+              startAdornment={<SearchIcon />}
               placeholder="Select Organization"
               options={organizationOptions}
               value={selectedOrgIds}
               onChange={onOrgIdsChange}
               limitTags={2}
+              multiple
             />
           </div>
         </div>
@@ -118,13 +121,13 @@ export function DeviceSelectionPanel({
               const deviceType = device.type?.toLowerCase() as DeviceType;
               const isSelected = selectedIds.has(id || '');
               return (
-                <SelectableDeviceCard
+                <SelectButton
                   key={id}
                   title={device.displayName || device.hostname}
-                  type={deviceType}
-                  subtitle={getDeviceOperatingSystem(device.osType)}
+                  icon={getDeviceTypeIcon(deviceType, { className: 'w-5 h-5' })}
+                  description={getDeviceOperatingSystem(device.osType)}
                   selected={isSelected}
-                  onSelect={() => onToggleSelect(id || '')}
+                  onClick={() => onToggleSelect(id || '')}
                 />
               );
             })}

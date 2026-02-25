@@ -1,20 +1,12 @@
 'use client';
 
-import {
-  OS_PLATFORMS,
-  ScriptArguments,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@flamingo-stack/openframe-frontend-core';
+import { OS_PLATFORMS, ScriptArguments } from '@flamingo-stack/openframe-frontend-core';
 import { TrashIcon } from '@flamingo-stack/openframe-frontend-core/components/icons-v2';
-import { Button, Input, Label } from '@flamingo-stack/openframe-frontend-core/components/ui';
+import { Autocomplete, Button, Input, Label } from '@flamingo-stack/openframe-frontend-core/components/ui';
 import { useMemo } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
-import type { ScriptEntry } from '../stores/scripts-store';
-import type { CreateScheduleFormData } from '../types/script-schedule.types';
+import type { ScriptEntry } from '../../stores/scripts-store';
+import type { CreateScheduleFormData } from '../../types/script-schedule.types';
 
 interface ScheduleActionFormCardProps {
   index: number;
@@ -45,7 +37,10 @@ export function ScheduleActionFormCard({ index, scripts, supportedPlatforms, onR
     [scripts, supportedPlatforms, selectedScriptId],
   );
 
-  const handleScriptChange = (scriptId: number) => {
+  const scriptOptions = useMemo(() => filteredScripts.map(s => ({ label: s.name, value: s.id })), [filteredScripts]);
+
+  const handleScriptChange = (scriptId: number | null) => {
+    if (!scriptId) return;
     const script = scripts.find(s => s.id === scriptId);
     if (script) {
       setValue(`actions.${index}.script`, script.id);
@@ -63,24 +58,20 @@ export function ScheduleActionFormCard({ index, scripts, supportedPlatforms, onR
             name={`actions.${index}.script`}
             control={control}
             render={({ field }) => (
-              <Select
-                value={field.value ? String(field.value) : ''}
-                onValueChange={val => handleScriptChange(Number(val))}
-              >
-                <SelectTrigger className="w-full bg-ods-card border border-ods-border">
-                  <SelectValue placeholder="Select a script..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredScripts.map(s => (
-                    <SelectItem key={s.id} value={String(s.id)}>
-                      <span className="inline-flex items-center">
-                        {s.name}
-                        <ScriptPlatformIcons platforms={s.supported_platforms} />
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Autocomplete<number>
+                options={scriptOptions}
+                value={field.value || null}
+                onChange={handleScriptChange}
+                placeholder="Select a script..."
+                renderOption={option => (
+                  <span className="inline-flex items-center">
+                    {option.label}
+                    <ScriptPlatformIcons
+                      platforms={filteredScripts.find(s => s.id === option.value)?.supported_platforms || []}
+                    />
+                  </span>
+                )}
+              />
             )}
           />
         </div>
@@ -115,24 +106,20 @@ export function ScheduleActionFormCard({ index, scripts, supportedPlatforms, onR
             name={`actions.${index}.script`}
             control={control}
             render={({ field }) => (
-              <Select
-                value={field.value ? String(field.value) : ''}
-                onValueChange={val => handleScriptChange(Number(val))}
-              >
-                <SelectTrigger className="w-full bg-ods-card border border-ods-border">
-                  <SelectValue placeholder="Select a script..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredScripts.map(s => (
-                    <SelectItem key={s.id} value={String(s.id)}>
-                      <span className="inline-flex items-center">
-                        {s.name}
-                        <ScriptPlatformIcons platforms={s.supported_platforms} />
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Autocomplete<number>
+                options={scriptOptions}
+                value={field.value || null}
+                onChange={handleScriptChange}
+                placeholder="Select a script..."
+                renderOption={option => (
+                  <span className="inline-flex items-center">
+                    {option.label}
+                    <ScriptPlatformIcons
+                      platforms={filteredScripts.find(s => s.id === option.value)?.supported_platforms || []}
+                    />
+                  </span>
+                )}
+              />
             )}
           />
         </div>

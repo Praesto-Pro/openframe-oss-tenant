@@ -17,8 +17,8 @@ import {
 } from '@flamingo-stack/openframe-frontend-core/components/icons-v2';
 import { useRouter } from 'next/navigation';
 import { useCallback, useMemo } from 'react';
-import { useScriptSchedule } from '../hooks/use-script-schedule';
-import { ScheduleDetailLoader } from './schedule-detail-loader';
+import { useScriptSchedule } from '../../hooks/use-script-schedule';
+import { ScheduleDetailSkeleton } from './schedule-details-skeleton';
 import { ScheduleDevicesTab } from './schedule-devices-tab';
 import { ScheduleHistoryTab } from './schedule-history-tab';
 import { ScheduleInfoBar } from './schedule-info-bar';
@@ -82,7 +82,7 @@ export function ScheduleDetailView({ scheduleId }: ScheduleDetailViewProps) {
   );
 
   if (isLoading) {
-    return <ScheduleDetailLoader />;
+    return <ScheduleDetailSkeleton />;
   }
 
   if (error) {

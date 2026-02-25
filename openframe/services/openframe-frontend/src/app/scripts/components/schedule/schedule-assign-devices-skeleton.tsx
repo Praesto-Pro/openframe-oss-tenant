@@ -82,7 +82,7 @@ function DeviceRowSkeleton() {
  * - Search input
  * - Device table
  */
-export function ScheduleAssignDevicesLoader() {
+export function ScheduleAssignDevicesSkeleton() {
   return (
     <div className="min-h-screen bg-ods-bg">
       <div className="max-w-7xl mx-auto p-6 space-y-6">
@@ -113,6 +113,7 @@ export function ScheduleAssignDevicesLoader() {
         {/* Device rows */}
         <div className="flex flex-col gap-1">
           {[...Array(8)].map((_, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: static skeleton rows
             <DeviceRowSkeleton key={i} />
           ))}
         </div>

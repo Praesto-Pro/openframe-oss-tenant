@@ -1,8 +1,8 @@
 'use client';
 
 import { OSTypeBadgeGroup } from '@flamingo-stack/openframe-frontend-core/components';
-import type { ScriptScheduleDetail } from '../types/script-schedule.types';
-import { formatScheduleDate, getRepeatLabel } from '../types/script-schedule.types';
+import type { ScriptScheduleDetail } from '../../types/script-schedule.types';
+import { formatScheduleDate, getRepeatLabel } from '../../types/script-schedule.types';
 
 interface ScheduleInfoBarProps {
   schedule: ScriptScheduleDetail;

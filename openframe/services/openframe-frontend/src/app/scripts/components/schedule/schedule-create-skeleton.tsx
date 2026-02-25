@@ -65,7 +65,7 @@ function ActionCardSkeleton() {
  * Full Schedule Create/Edit page loader
  * Matches the exact layout of ScheduleCreateView inside DetailPageContainer
  */
-export function ScheduleCreateLoader() {
+export function ScheduleCreateSkeleton() {
   return (
     <div className="min-h-screen bg-ods-bg">
       <div className="max-w-7xl mx-auto p-6 space-y-6">

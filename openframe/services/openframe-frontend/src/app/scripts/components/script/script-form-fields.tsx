@@ -15,8 +15,8 @@ import { useMdUp } from '@flamingo-stack/openframe-frontend-core/hooks';
 import { SHELL_TYPES } from '@flamingo-stack/openframe-frontend-core/types';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 
-import { CATEGORIES, type EditScriptFormData } from '../types/edit-script.types';
-import { AVAILABLE_PLATFORMS, DISABLED_PLATFORMS } from '../utils/script-utils';
+import { CATEGORIES, type EditScriptFormData } from '../../types/edit-script.types';
+import { AVAILABLE_PLATFORMS, DISABLED_PLATFORMS } from '../../utils/script-utils';
 import { ScriptEditor } from './script-editor';
 
 interface ScriptFormFieldsProps {

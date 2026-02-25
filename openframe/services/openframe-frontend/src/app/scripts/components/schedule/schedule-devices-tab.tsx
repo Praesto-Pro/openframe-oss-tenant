@@ -3,8 +3,8 @@
 import { LoadError, OSTypeBadge } from '@flamingo-stack/openframe-frontend-core';
 import { Table, type TableColumn } from '@flamingo-stack/openframe-frontend-core/components/ui';
 import { useMemo } from 'react';
-import { useScriptScheduleAgents } from '../hooks/use-script-schedule';
-import type { ScriptScheduleAgent, ScriptScheduleDetail } from '../types/script-schedule.types';
+import { useScriptScheduleAgents } from '../../hooks/use-script-schedule';
+import type { ScriptScheduleAgent, ScriptScheduleDetail } from '../../types/script-schedule.types';
 
 interface ScheduleDevicesTabProps {
   schedule: ScriptScheduleDetail;

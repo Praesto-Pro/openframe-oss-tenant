@@ -80,7 +80,7 @@ function EditorSkeleton() {
  * Full Edit Script page loader
  * Matches the exact layout of EditScriptPage + ScriptFormFields
  */
-export function EditScriptLoader() {
+export function EditScriptSkeleton() {
   return (
     <div className="min-h-screen bg-ods-bg">
       <div className="max-w-7xl mx-auto p-6 space-y-6">

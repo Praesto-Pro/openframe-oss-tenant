@@ -5,10 +5,10 @@ import { Card } from '@flamingo-stack/openframe-frontend-core/components/ui';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useMemo, useState } from 'react';
-import { useEditScriptForm } from '../hooks/use-edit-script-form';
-import { useScriptDetails } from '../hooks/use-script-details';
-import { useTestRuns } from '../hooks/use-test-runs';
-import { EditScriptLoader } from './edit-script-loader';
+import { useEditScriptForm } from '../../hooks/use-edit-script-form';
+import { useScriptDetails } from '../../hooks/use-script-details';
+import { useTestRuns } from '../../hooks/use-test-runs';
+import { EditScriptSkeleton } from './edit-script-skeleton';
 import { ScriptFormFields } from './script-form-fields';
 import { TestRunCard } from './test-run-card';
 import { type SelectedTestDevice, TestScriptModal } from './test-script-modal';
@@ -67,7 +67,7 @@ export function EditScriptPage({ scriptId }: EditScriptPageProps) {
   );
 
   if (isLoadingScript) {
-    return <EditScriptLoader />;
+    return <EditScriptSkeleton />;
   }
 
   if (scriptError && isEditMode) {

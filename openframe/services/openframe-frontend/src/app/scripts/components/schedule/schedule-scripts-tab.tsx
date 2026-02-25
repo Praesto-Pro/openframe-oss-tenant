@@ -5,7 +5,7 @@ import { Chevron01DownIcon } from '@flamingo-stack/openframe-frontend-core/compo
 import { Button } from '@flamingo-stack/openframe-frontend-core/components/ui';
 import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
-import type { ScriptScheduleAction, ScriptScheduleDetail } from '../types/script-schedule.types';
+import type { ScriptScheduleAction, ScriptScheduleDetail } from '../../types/script-schedule.types';
 
 interface ScheduleScriptsTabProps {
   schedule: ScriptScheduleDetail;

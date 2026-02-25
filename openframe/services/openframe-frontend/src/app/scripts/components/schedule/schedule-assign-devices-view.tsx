@@ -2,7 +2,7 @@
 
 import {
   DetailPageContainer,
-  DeviceType,
+  type DeviceType,
   getDeviceTypeIcon,
   getOSPlatformId,
   LoadError,
@@ -32,14 +32,14 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useCallback, useMemo, useState } from 'react';
 import { apiClient } from '@/lib/api-client';
-import { DEVICE_STATUS } from '../../devices/constants/device-statuses';
-import { GET_DEVICES_QUERY } from '../../devices/queries/devices-queries';
-import type { Device, DevicesGraphQlNode, GraphQlResponse } from '../../devices/types/device.types';
-import { createDeviceListItem } from '../../devices/utils/device-transform';
-import { useScriptSchedule, useScriptScheduleAgents } from '../hooks/use-script-schedule';
-import { useReplaceScheduleAgents } from '../hooks/use-script-schedule-mutations';
-import { formatScheduleDate, getRepeatLabel } from '../types/script-schedule.types';
-import { ScheduleAssignDevicesLoader } from './schedule-assign-devices-loader';
+import { DEVICE_STATUS } from '../../../devices/constants/device-statuses';
+import { GET_DEVICES_QUERY } from '../../../devices/queries/devices-queries';
+import type { Device, DevicesGraphQlNode, GraphQlResponse } from '../../../devices/types/device.types';
+import { createDeviceListItem } from '../../../devices/utils/device-transform';
+import { useScriptSchedule, useScriptScheduleAgents } from '../../hooks/use-script-schedule';
+import { useReplaceScheduleAgents } from '../../hooks/use-script-schedule-mutations';
+import { formatScheduleDate, getRepeatLabel } from '../../types/script-schedule.types';
+import { ScheduleAssignDevicesSkeleton } from './schedule-assign-devices-skeleton';
 import { ScheduleInfoBarFromData } from './schedule-info-bar';
 
 interface ScheduleAssignDevicesViewProps {
@@ -340,7 +340,12 @@ export function ScheduleAssignDevicesView({ scheduleId }: ScheduleAssignDevicesV
 
   const assignTabs: TabItem[] = useMemo(
     () => [
-      { id: 'available', label: 'Available Devices', icon: MonitorIcon, component: DeviceTabContent },
+      {
+        id: 'available',
+        label: 'Available Devices',
+        icon: MonitorIcon,
+        component: DeviceTabContent,
+      },
       {
         id: 'selected',
         label: `Selected Devices (${selectedAgentIds.size})`,
@@ -354,7 +359,7 @@ export function ScheduleAssignDevicesView({ scheduleId }: ScheduleAssignDevicesV
   const ActiveTabComponent = getTabComponent(assignTabs, activeSubTab);
 
   if (isLoadingSchedule) {
-    return <ScheduleAssignDevicesLoader />;
+    return <ScheduleAssignDevicesSkeleton />;
   }
 
   if (scheduleError) {
@@ -429,7 +434,7 @@ export function ScheduleAssignDevicesView({ scheduleId }: ScheduleAssignDevicesV
         <div className="flex items-center gap-4">
           <div className="flex-1">
             <Input
-              startAdornment={<SearchIcon size={20} />}
+              startAdornment={<SearchIcon />}
               placeholder="Search for Devices"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
